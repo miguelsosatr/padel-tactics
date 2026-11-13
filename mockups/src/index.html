@@ -1,0 +1,346 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Pádel Táctico · Maquetas v0.3</title>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<style>
+  :root {
+    --bg: #070f1c; --panel: #0f1d33; --panel2: #152844; --line: #22385c;
+    --text: #eaf1ff; --muted: #8ea3c4;
+    --lime: #d7f548; --teal: #38d6b0; --coral: #ff6b5b; --amber: #ffc542; --green: #3ddc97;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #03070d; color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .page-head { padding: 28px 32px 0; max-width: 1100px; }
+  .page-head h1 { margin: 0 0 6px; font-size: 22px; }
+  .page-head p { margin: 0 0 12px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+  .frames { display: flex; gap: 36px; padding: 26px 32px 40px; overflow-x: auto; align-items: flex-start; }
+  .frame-wrap { flex: 0 0 auto; width: 390px; }
+  .frame-title { font-size: 12px; color: var(--muted); margin-bottom: 10px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
+  .notes { margin-top: 14px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .notes b { color: var(--text); }
+  .notes ul { margin: 6px 0 0; padding-left: 18px; }
+
+  .phone { width: 390px; height: 800px; border-radius: 46px; background: var(--bg); border: 10px solid #1a1f29;
+    box-shadow: 0 30px 60px rgba(0,0,0,.5); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  .status { height: 34px; flex: none; display: flex; justify-content: space-between; padding: 11px 28px 0; font-size: 13px; font-weight: 600; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 16px 10px; flex: none; }
+  .back { font-size: 13px; color: var(--lime); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+  .back.disabled { color: var(--muted); opacity: .5; }
+  .back, .opt, .btn { cursor: pointer; user-select: none; }
+  .opt:hover { border-color: #3a5a8c; }
+  .ttl { font-size: 14px; font-weight: 700; }
+  .score { font-size: 12px; font-weight: 700; background: var(--panel2); border: 1px solid var(--line); padding: 4px 9px; border-radius: 8px; }
+
+  .trail { display: flex; gap: 6px; padding: 0 16px 10px; overflow: hidden; flex: none; }
+  .chip { font-size: 11px; padding: 5px 9px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+  .chip.now { color: var(--text); border-color: var(--lime); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .dot.g, .sw.g { background: var(--green); } .dot.a, .sw.a { background: var(--amber); } .dot.r, .sw.r { background: var(--coral); } .dot.n { background: var(--lime); }
+
+  .stage { flex: 1; position: relative; min-height: 220px; }
+  .stage canvas { display: block; touch-action: none; }
+  .hud { position: absolute; font-size: 11px; font-weight: 600; background: rgba(15,29,51,.85); border: 1px solid var(--line); padding: 5px 9px; border-radius: 8px; pointer-events: none; }
+  .hud.tl { top: 8px; left: 12px; } .hud.br { bottom: 30px; left: 12px; color: var(--muted); }
+  .hud b { color: var(--lime); }
+
+  .sheet { flex: none; background: var(--panel); border-radius: 22px 22px 0 0; padding: 16px 16px 20px; border-top: 1px solid var(--line); }
+  .kicker { font-size: 11px; color: var(--lime); text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
+  .ctx { font-size: 13px; color: var(--muted); margin: 6px 0 2px; line-height: 1.4; }
+  .q { font-size: 19px; font-weight: 750; margin: 4px 0 12px; line-height: 1.25; }
+  .opt { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); margin-bottom: 7px; }
+  .opt.sel { border-color: var(--lime); box-shadow: 0 0 0 1px var(--lime) inset; }
+  .key { flex: none; width: 26px; height: 26px; border-radius: 8px; background: #0b1626; display: grid; place-items: center; font-weight: 800; color: var(--lime); font-size: 13px; }
+  .opt .t { font-weight: 650; font-size: 15px; }
+  .opt .d { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .zkey { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-left: auto; }
+
+  .btns { display: flex; gap: 8px; margin-top: 12px; }
+  .btn { flex: 1; text-align: center; padding: 13px 10px; border-radius: 14px; font-weight: 700; font-size: 14px; }
+  .btn.pri { background: var(--lime); color: #0a1424; }
+  .btn.sec { background: var(--panel2); border: 1px solid var(--line); }
+
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; padding: 5px 10px; border-radius: 999px; }
+  .badge.err { background: rgba(255,107,91,.15); color: var(--coral); border: 1px solid rgba(255,107,91,.4); }
+  .badge.ok { background: rgba(61,220,151,.13); color: var(--green); border: 1px solid rgba(61,220,151,.4); }
+  .badge.dep { background: rgba(255,197,66,.14); color: var(--amber); border: 1px solid rgba(255,197,66,.45); }
+  .ev { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .03em; padding: 3px 8px; border-radius: 6px; margin-left: 4px; }
+  .ev.study { background: rgba(124,199,255,.14); color: #9fd3ff; border: 1px solid rgba(124,199,255,.35); }
+  .ev.fed { background: rgba(61,220,151,.12); color: #84e9bd; border: 1px solid rgba(61,220,151,.35); }
+  .ev.cons { background: rgba(199,155,255,.14); color: #d6b8ff; border: 1px solid rgba(199,155,255,.35); }
+  .box.yes { border-left: 3px solid var(--green); }
+  .box.warn { border-left: 3px solid var(--amber); }
+  .box ul { margin: 2px 0 0; padding-left: 16px; }
+  .box li { margin: 1px 0; }
+  .fb-title { font-size: 18px; font-weight: 750; margin: 10px 0 6px; line-height: 1.25; }
+  .fb-body { font-size: 13.5px; line-height: 1.5; color: #c9d6ee; margin: 0 0 10px; }
+  .box { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; margin-bottom: 8px; }
+  .box .lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 3px; }
+  .source { font-size: 11.5px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .source i { font-style: normal; background: #0b1626; border: 1px dashed var(--line); padding: 2px 7px; border-radius: 6px; }
+
+  /* Encuesta */
+  .survey { flex: 1; padding: 4px 18px 20px; display: flex; flex-direction: column; }
+  .progress { height: 6px; background: var(--panel2); border-radius: 99px; overflow: hidden; margin: 4px 0 18px; }
+  .progress div { height: 100%; width: 28%; background: var(--lime); border-radius: 99px; }
+  .answered { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+  .survey .q { font-size: 23px; margin-bottom: 6px; }
+  .help { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin: 0 0 18px; }
+  .scard { display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); margin-bottom: 10px; }
+  .scard.sel { border-color: var(--lime); box-shadow: 0 0 0 1px var(--lime) inset; }
+  .scard .t { font-weight: 700; font-size: 16px; }
+  .scard .d { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .survey .btn { flex: none; }
+  .upcoming { margin-top: auto; font-size: 12px; color: var(--muted); }
+  .upcoming ol { margin: 6px 0 14px; padding-left: 18px; line-height: 1.7; }
+
+  /* Resumen */
+  .summary { flex: 1; padding: 2px 16px 18px; display: flex; flex-direction: column; overflow: hidden; }
+  .result { border-radius: 18px; padding: 16px; background: linear-gradient(135deg, rgba(255,107,91,.25), rgba(255,107,91,.05)); border: 1px solid rgba(255,107,91,.35); }
+  .result .big { font-size: 22px; font-weight: 800; }
+  .result .sub { font-size: 13px; color: #f3c9c4; margin-top: 2px; }
+  .stats { display: flex; gap: 8px; margin: 12px 0; }
+  .stat { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; text-align: center; }
+  .stat .n { font-size: 20px; font-weight: 800; }
+  .stat .l { font-size: 11px; color: var(--muted); }
+  .tl-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .tl-row:last-child { border-bottom: none; }
+  .tl-n { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #0a1424; }
+  .tl-row .k { color: var(--muted); font-size: 11.5px; }
+  .tl-row .v { font-weight: 650; }
+  .tl-row .fix { font-size: 11px; color: var(--amber); }
+  .redo { margin-left: auto; color: var(--lime); font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .lesson { margin-top: 10px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--lime); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+</style>
+</head>
+<body>
+
+<div class="page-head">
+  <h1>Pádel Táctico · Maquetas v0.3</h1>
+  <p><b>Nuevo:</b> la primera pantalla es un prototipo jugable de un punto completo. Después vienen seis pantallas clave para validar el diseño antes de programar el juego. Las pistas 3D son reales (Three.js, sin modelos pesados):
+    <b>arrastra cualquier pista para girar la cámara</b>. Los textos tácticos son de ejemplo; la teoría final se citará con fuentes verificadas.</p>
+  <div class="legend">
+    <span><i class="sw" style="background:var(--lime)"></i>Tú</span>
+    <span><i class="sw" style="background:var(--teal)"></i>Compañero (compu)</span>
+    <span><i class="sw" style="background:var(--coral)"></i>Rivales</span>
+    <span><i class="sw" style="background:#eaff4a"></i>Pelota / trayectoria</span>
+    <span><i class="sw g"></i>Óptimo</span>
+    <span><i class="sw a"></i>Depende (válida con condiciones)</span>
+    <span><i class="sw r"></i>Error común</span>
+  </div>
+</div>
+
+<div class="frames">
+
+  <!-- 0. PROTOTIPO JUGABLE -->
+  <div class="frame-wrap">
+    <div class="frame-title" style="color:var(--lime)">▶ Prototipo jugable · un punto completo</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="topbar"><span class="back" id="proto-back">← Decisión anterior</span><span class="ttl" id="proto-title">Punto 1 · Sacas tú</span><span class="score" id="proto-score">0 - 0</span></div>
+      <div class="trail" id="proto-trail"></div>
+      <div class="stage" id="proto-stage" style="flex:none;height:320px"></div>
+      <div class="sheet" id="proto-sheet" style="flex:1;overflow:auto"></div>
+    </div>
+    <div class="notes"><b>Cómo funciona:</b>
+      <ul><li>Eliges → ves el feedback → “Seguir el punto” reproduce lo que pasa y se congela en la siguiente decisión.</li><li>El punto termina cuando alguien lo gana; luego “Siguiente punto” acomoda a todos y ahora sacas desde el otro lado.</li><li>Prueba varias rutas: saque rápido + subir a la red, quedarte atrás, remate vs. bandeja.</li><li>“← Decisión anterior” regresa la escena tal como estaba.</li></ul>
+    </div>
+  </div>
+
+  <!-- 1. ENCUESTA -->
+  <div class="frame-wrap">
+    <div class="frame-title">1 · Encuesta inicial</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="topbar"><span class="back">← Atrás</span><span class="ttl">Arma tu perfil</span><span class="score">2 / 7</span></div>
+      <div class="survey">
+        <div class="progress"><div></div></div>
+        <div class="answered"><span class="chip"><i class="dot g"></i>Mano: Diestro</span></div>
+        <div class="q">¿De qué lado juegas normalmente?</div>
+        <p class="help">Viendo hacia la red: el lado <b>drive</b> es el derecho y el lado <b>revés</b> es el izquierdo.</p>
+
+        <div class="scard sel">
+          <svg viewBox="0 0 40 60" width="34" height="50"><rect x="1" y="1" width="38" height="58" rx="3" fill="#1d4f95" stroke="#9fd8ff"/><line x1="1" y1="30" x2="39" y2="30" stroke="#fff" stroke-width="1.6"/><line x1="1" y1="16" x2="39" y2="16" stroke="#fff" stroke-width=".7"/><line x1="1" y1="44" x2="39" y2="44" stroke="#fff" stroke-width=".7"/><line x1="20" y1="16" x2="20" y2="44" stroke="#fff" stroke-width=".7"/><rect x="21" y="31" width="17" height="27" fill="#d7f548" opacity=".7"/></svg>
+          <div><div class="t">Drive</div><div class="d">Lado derecho</div></div>
+        </div>
+        <div class="scard">
+          <svg viewBox="0 0 40 60" width="34" height="50"><rect x="1" y="1" width="38" height="58" rx="3" fill="#1d4f95" stroke="#9fd8ff"/><line x1="1" y1="30" x2="39" y2="30" stroke="#fff" stroke-width="1.6"/><line x1="1" y1="16" x2="39" y2="16" stroke="#fff" stroke-width=".7"/><line x1="1" y1="44" x2="39" y2="44" stroke="#fff" stroke-width=".7"/><line x1="20" y1="16" x2="20" y2="44" stroke="#fff" stroke-width=".7"/><rect x="2" y="31" width="17" height="27" fill="#d7f548" opacity=".7"/></svg>
+          <div><div class="t">Revés</div><div class="d">Lado izquierdo</div></div>
+        </div>
+        <div class="scard">
+          <svg viewBox="0 0 40 60" width="34" height="50"><rect x="1" y="1" width="38" height="58" rx="3" fill="#1d4f95" stroke="#9fd8ff"/><line x1="1" y1="30" x2="39" y2="30" stroke="#fff" stroke-width="1.6"/><line x1="1" y1="16" x2="39" y2="16" stroke="#fff" stroke-width=".7"/><line x1="1" y1="44" x2="39" y2="44" stroke="#fff" stroke-width=".7"/><line x1="20" y1="16" x2="20" y2="44" stroke="#fff" stroke-width=".7"/><rect x="2" y="31" width="36" height="27" fill="#d7f548" opacity=".3"/></svg>
+          <div><div class="t">Todavía no tengo lado fijo</div><div class="d">Te asignamos uno según tu perfil</div></div>
+        </div>
+
+        <div class="upcoming">Siguientes preguntas:
+          <ol start="3"><li>¿Cuánto tiempo llevas jugando? (nivel)</li><li>Tu golpe más fuerte</li><li>El golpe que más te cuesta</li><li>Tu estilo: atacar o defender</li><li>¿Tu compañero es zurdo o diestro?</li></ol>
+        </div>
+        <div class="btn pri">Siguiente</div>
+      </div>
+    </div>
+    <div class="notes"><b>Qué revisar:</b>
+      <ul><li>Una pregunta por pantalla, con mini pista para explicar el lado.</li><li>¿Las 7 preguntas son las correctas? ¿Quitamos o agregamos alguna?</li></ul>
+    </div>
+  </div>
+
+  <!-- 2. DECISIÓN DE SAQUE -->
+  <div class="frame-wrap">
+    <div class="frame-title">2 · Decisión: dirección del saque</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="topbar"><span class="back">← Decisión anterior</span><span class="ttl">Sacas tú</span><span class="score">0 - 0</span></div>
+      <div class="trail">
+        <span class="chip"><i class="dot g"></i>1 · Lento con efecto</span>
+        <span class="chip now"><i class="dot n"></i>2 · Dirección</span>
+      </div>
+      <div class="stage" id="stage-serve">
+        <div class="hud br">↻ Arrastra para girar</div>
+      </div>
+      <div class="sheet">
+        <div class="kicker">Decisión 2 · Saque</div>
+        <div class="q">¿A dónde mandas el saque?</div>
+        <div class="opt"><span class="key">A</span><div><div class="t">A la T</div><div class="d">Al centro, cerca de la línea de saque</div></div><span class="zkey" style="background:#d7f548"></span></div>
+        <div class="opt"><span class="key">B</span><div><div class="t">Al vidrio</div><div class="d">Hacia la pared lateral del que resta</div></div><span class="zkey" style="background:#7cc7ff"></span></div>
+        <div class="opt"><span class="key">C</span><div><div class="t">Al cuerpo</div><div class="d">Directo a donde está parado el que resta</div></div><span class="zkey" style="background:#c79bff"></span></div>
+      </div>
+    </div>
+    <div class="notes"><b>Qué revisar:</b>
+      <ul><li>Las zonas de destino se ven en la pista y coinciden con las opciones A/B/C.</li><li>Arriba, el “camino” del punto: cada decisión tomada con su calificación.</li><li>“← Decisión anterior” siempre disponible.</li></ul>
+    </div>
+  </div>
+
+  <!-- 3. FEEDBACK -->
+  <div class="frame-wrap">
+    <div class="frame-title">3 · Feedback inmediato (error común)</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="topbar"><span class="back">← Decisión anterior</span><span class="ttl">Sacas tú</span><span class="score">0 - 0</span></div>
+      <div class="trail">
+        <span class="chip"><i class="dot g"></i>1 · Lento</span>
+        <span class="chip"><i class="dot g"></i>2 · Al vidrio</span>
+        <span class="chip now"><i class="dot r"></i>3 · Me quedo atrás</span>
+      </div>
+      <div class="stage" id="stage-feedback">
+        <div class="hud br">↻ Arrastra para girar</div>
+      </div>
+      <div class="sheet">
+        <span class="badge err">✕ Error común</span>
+        <div class="fb-title">Te quedaste en el fondo después de sacar</div>
+        <p class="fb-body">Al sacar tienes la iniciativa. Lo que se enseña es subir a la red con tu compañero mientras el rival resta. Si te quedas atrás, el rival resta cómodo y su pareja se queda con la red.</p>
+        <div class="box"><div class="lbl">Mejor opción</div><span class="badge ok">✓ Óptimo</span>&nbsp; Subir a la red después del saque</div>
+        <div class="source">📚 Fuente: <i>pendiente de verificar</i></div>
+        <div class="btns"><div class="btn sec">↩ Cambiar respuesta</div><div class="btn pri">Seguir el punto →</div></div>
+      </div>
+    </div>
+    <div class="notes"><b>Qué revisar:</b>
+      <ul><li>El feedback sale al instante, a mitad del punto.</li><li>La pista muestra tu posición, en verde dónde deberías estar y la consecuencia (el resto).</li><li>Puedes cambiar tu respuesta o seguir jugando con tu error.</li></ul>
+    </div>
+  </div>
+
+  <!-- 4. FEEDBACK AMARILLO: DEPENDE -->
+  <div class="frame-wrap">
+    <div class="frame-title">4 · Feedback “Depende” (amarillo)</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="topbar"><span class="back">← Decisión anterior</span><span class="ttl">Sacas tú</span><span class="score">0 - 0</span></div>
+      <div class="trail">
+        <span class="chip"><i class="dot g"></i>1 · Lento con efecto</span>
+        <span class="chip now"><i class="dot a"></i>2 · A la T</span>
+      </div>
+      <div class="stage" id="stage-depends">
+        <div class="hud tl">Rival: diestro · drive · revés <b>¿?</b></div>
+        <div class="hud br">↻ Arrastra para girar</div>
+      </div>
+      <div class="sheet">
+        <span class="badge dep">◐ Depende</span><span class="ev study">ESTUDIO</span><span class="ev cons">CONSENSO + LÓGICA</span>
+        <div class="fb-title">Sacaste a la T contra el de drive</div>
+        <p class="fb-body">Contra un diestro de drive, la T le queda a su <b>revés</b>. No es mala idea; depende del rival.</p>
+        <div class="box yes"><div class="lbl">Funciona si</div><ul><li>Su revés es más débil que su derecha.</li><li>Lo alternas con el vidrio para que no se acomode.</li></ul></div>
+        <div class="box warn"><div class="lbl">Cuidado si</div><ul><li>Tiene buen revés y el saque te queda sin efecto: resta cómodo.</li></ul></div>
+        <div class="source">📊 Profesionales: casi todos sacan al vidrio, pero la T se asoció con más puntos ganados.</div>
+        <div class="btns"><div class="btn sec">↩ Cambiar respuesta</div><div class="btn pri">Seguir el punto →</div></div>
+      </div>
+    </div>
+    <div class="notes"><b>Qué revisar:</b>
+      <ul><li>Amarillo = no está mal; te dice <b>cuándo</b> funciona y <b>cuándo</b> no.</li><li>Cada idea lleva su etiqueta de evidencia: <span class="ev study">ESTUDIO</span> o <span class="ev cons">CONSENSO + LÓGICA</span>.</li><li>Arriba a la izquierda: lo que sabes del rival. Hoy todos son “promedio”; más adelante podríamos darte una ficha del rival (por ejemplo “revés débil”) para que el amarillo se vuelva verde.</li><li>¿Puntaje? Propuesta: Óptimo 2, Depende 1, Error 0.</li></ul>
+    </div>
+  </div>
+
+  <!-- 4. DECISIÓN DE GOLPE CON ALTURA -->
+  <div class="frame-wrap">
+    <div class="frame-title">5 · Decisión: qué golpe usar (con alturas)</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="topbar"><span class="back">← Decisión anterior</span><span class="ttl">Sacas tú</span><span class="score">0 - 0</span></div>
+      <div class="trail">
+        <span class="chip"><i class="dot g"></i>1</span>
+        <span class="chip"><i class="dot g"></i>2</span>
+        <span class="chip"><i class="dot g"></i>3 · Subo a la red</span>
+        <span class="chip"><i class="dot a"></i>4 · Volea al centro</span>
+        <span class="chip now"><i class="dot n"></i>5 · Globo</span>
+      </div>
+      <div class="stage" id="stage-lob">
+        <div class="hud tl">Impacto: <b id="lob-hit-height">–</b></div>
+        <div class="hud br" style="left:auto;right:12px">↻ Arrastra para girar</div>
+      </div>
+      <div class="sheet">
+        <div class="kicker">Decisión 5 · Te tiran un globo</div>
+        <div class="ctx">Estás en la red y el rival te pasa un globo a media altura por encima. Ya vas retrocediendo.</div>
+        <div class="q" style="margin-bottom:8px">¿Qué golpe usas?</div>
+        <div class="opt"><span class="key">A</span><div><div class="t">Remate</div><div class="d">Pegarle con todo para cerrar el punto</div></div></div>
+        <div class="opt"><span class="key">B</span><div><div class="t">Bandeja</div><div class="d">Golpe controlado por arriba, sin mucha potencia</div></div></div>
+        <div class="opt"><span class="key">C</span><div><div class="t">Víbora</div><div class="d">Por arriba con efecto lateral, más agresiva</div></div></div>
+        <div class="opt"><span class="key">D</span><div><div class="t">Dejarla botar</div><div class="d">Ir atrás y jugarla después del vidrio</div></div></div>
+      </div>
+    </div>
+    <div class="notes"><b>Qué revisar:</b>
+      <ul><li>Vista lateral para entender la altura: altura máxima del globo y a qué altura le pegas.</li><li>Las opciones explican cada golpe sin decirte cuál es el correcto.</li><li>Faltaría una opción E (globo); ¿cabe o usamos scroll?</li></ul>
+    </div>
+  </div>
+
+  <!-- 5. RESUMEN -->
+  <div class="frame-wrap">
+    <div class="frame-title">6 · Resumen del punto</div>
+    <div class="phone">
+      <div class="status"><span>9:41</span><span>●●● 100%</span></div>
+      <div class="topbar"><span class="back disabled">←</span><span class="ttl">Fin del punto</span><span class="score">0 - 15</span></div>
+      <div class="summary">
+        <div class="result"><div class="big">Perdiste el punto</div><div class="sub">El rival defendió tu remate después del vidrio y ganó la red.</div></div>
+        <div class="stats">
+          <div class="stat"><div class="n" style="color:var(--green)">3</div><div class="l">Óptimas</div></div>
+          <div class="stat"><div class="n" style="color:var(--amber)">1</div><div class="l">Depende</div></div>
+          <div class="stat"><div class="n" style="color:var(--coral)">1</div><div class="l">Error común</div></div>
+        </div>
+        <div>
+          <div class="tl-row"><span class="tl-n" style="background:var(--green)">1</span><div><div class="k">Tipo de saque</div><div class="v">Lento con efecto</div></div></div>
+          <div class="tl-row"><span class="tl-n" style="background:var(--green)">2</span><div><div class="k">Dirección del saque</div><div class="v">Al vidrio</div></div></div>
+          <div class="tl-row"><span class="tl-n" style="background:var(--green)">3</span><div><div class="k">Después de sacar</div><div class="v">Subí a la red</div><div class="fix">Corregida (antes: me quedé atrás)</div></div></div>
+          <div class="tl-row"><span class="tl-n" style="background:var(--amber)">4</span><div><div class="k">Volea al resto</div><div class="v">Volea al centro</div></div><span class="redo">Repasar ↩</span></div>
+          <div class="tl-row"><span class="tl-n" style="background:var(--coral)">5</span><div><div class="k">Globo del rival</div><div class="v">Remate desde media pista</div></div><span class="redo">Repasar ↩</span></div>
+        </div>
+        <div class="lesson"><b>Lección del punto:</b> ante un globo a media pista, la bandeja te ayuda a conservar la red. El remate sin buena posición suele regresar del vidrio.<div class="source" style="margin-top:6px">📚 Fuente: <i>pendiente de verificar</i></div></div>
+        <div class="btns" style="margin-top:auto"><div class="btn sec">Repetir punto</div><div class="btn pri">Siguiente punto</div></div>
+      </div>
+    </div>
+    <div class="notes"><b>Qué revisar:</b>
+      <ul><li>Cuenta de decisiones óptimas, “depende” y errores.</li><li>Se marca cuando corregiste una respuesta.</li><li>“Repasar” te lleva a esa decisión para probar otra opción.</li></ul>
+    </div>
+  </div>
+
+</div>
+
+<script type="module" src="./screens.js"></script>
+<script type="module" src="./proto.js"></script>
+</body>
+</html>

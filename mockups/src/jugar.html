@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#070f1c" />
+<title>Pádel Táctico · Prototipo</title>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<!-- STYLES -->
+<style>
+  /* Versión a pantalla completa para celular: el "teléfono" ocupa toda la pantalla */
+  html, body { height: 100%; background: var(--bg); }
+  .phone.full { width: 100%; max-width: 520px; height: 100dvh; margin: 0 auto; border: 0; border-radius: 0; box-shadow: none; }
+  .phone.full .topbar { padding-top: max(12px, env(safe-area-inset-top)); }
+  .phone.full #proto-stage { height: 42dvh !important; }
+  .phone.full .sheet { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+</style>
+</head>
+<body>
+  <div class="phone full">
+    <div class="topbar"><span class="back" id="proto-back">← Decisión anterior</span><span class="ttl" id="proto-title">Punto 1 · Sacas tú</span><span class="score" id="proto-score">0 - 0</span></div>
+    <div class="trail" id="proto-trail"></div>
+    <div class="stage" id="proto-stage" style="flex:none;height:320px"></div>
+    <div class="sheet" id="proto-sheet" style="flex:1;overflow:auto"></div>
+  </div>
+<!-- SCRIPT -->
+</body>
+</html>

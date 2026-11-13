@@ -1,0 +1,1388 @@
+<!doctype html>
+<html lang="es-MX">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="theme-color" content="#070f1c" />
+<title>Pádel Táctico · Prototipo</title>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+<style>
+  :root {
+    --bg: #070f1c; --panel: #0f1d33; --panel2: #152844; --line: #22385c;
+    --text: #eaf1ff; --muted: #8ea3c4;
+    --lime: #d7f548; --teal: #38d6b0; --coral: #ff6b5b; --amber: #ffc542; --green: #3ddc97;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #03070d; color: var(--text); font-family: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; }
+  .page-head { padding: 28px 32px 0; max-width: 1100px; }
+  .page-head h1 { margin: 0 0 6px; font-size: 22px; }
+  .page-head p { margin: 0 0 12px; color: var(--muted); font-size: 14px; line-height: 1.5; }
+  .legend { display: flex; flex-wrap: wrap; gap: 14px; font-size: 13px; color: var(--muted); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .sw { width: 12px; height: 12px; border-radius: 50%; display: inline-block; }
+
+  .frames { display: flex; gap: 36px; padding: 26px 32px 40px; overflow-x: auto; align-items: flex-start; }
+  .frame-wrap { flex: 0 0 auto; width: 390px; }
+  .frame-title { font-size: 12px; color: var(--muted); margin-bottom: 10px; letter-spacing: .06em; text-transform: uppercase; font-weight: 700; }
+  .notes { margin-top: 14px; font-size: 13px; color: var(--muted); line-height: 1.5; }
+  .notes b { color: var(--text); }
+  .notes ul { margin: 6px 0 0; padding-left: 18px; }
+
+  .phone { width: 390px; height: 800px; border-radius: 46px; background: var(--bg); border: 10px solid #1a1f29;
+    box-shadow: 0 30px 60px rgba(0,0,0,.5); overflow: hidden; display: flex; flex-direction: column; position: relative; }
+  .status { height: 34px; flex: none; display: flex; justify-content: space-between; padding: 11px 28px 0; font-size: 13px; font-weight: 600; }
+  .topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; padding: 6px 16px 10px; flex: none; }
+  .back { font-size: 13px; color: var(--lime); font-weight: 600; display: inline-flex; align-items: center; gap: 4px; }
+  .back.disabled { color: var(--muted); opacity: .5; }
+  .back, .opt, .btn { cursor: pointer; user-select: none; }
+  .opt:hover { border-color: #3a5a8c; }
+  .ttl { font-size: 14px; font-weight: 700; }
+  .score { font-size: 12px; font-weight: 700; background: var(--panel2); border: 1px solid var(--line); padding: 4px 9px; border-radius: 8px; }
+
+  .trail { display: flex; gap: 6px; padding: 0 16px 10px; overflow: hidden; flex: none; }
+  .chip { font-size: 11px; padding: 5px 9px; border-radius: 999px; background: var(--panel2); border: 1px solid var(--line); white-space: nowrap; display: inline-flex; gap: 6px; align-items: center; color: var(--muted); }
+  .chip.now { color: var(--text); border-color: var(--lime); }
+  .dot { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
+  .dot.g, .sw.g { background: var(--green); } .dot.a, .sw.a { background: var(--amber); } .dot.r, .sw.r { background: var(--coral); } .dot.n { background: var(--lime); }
+
+  .stage { flex: 1; position: relative; min-height: 220px; }
+  .stage canvas { display: block; touch-action: none; }
+  .hud { position: absolute; font-size: 11px; font-weight: 600; background: rgba(15,29,51,.85); border: 1px solid var(--line); padding: 5px 9px; border-radius: 8px; pointer-events: none; }
+  .hud.tl { top: 8px; left: 12px; } .hud.br { bottom: 30px; left: 12px; color: var(--muted); }
+  .hud b { color: var(--lime); }
+
+  .sheet { flex: none; background: var(--panel); border-radius: 22px 22px 0 0; padding: 16px 16px 20px; border-top: 1px solid var(--line); }
+  .kicker { font-size: 11px; color: var(--lime); text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
+  .ctx { font-size: 13px; color: var(--muted); margin: 6px 0 2px; line-height: 1.4; }
+  .q { font-size: 19px; font-weight: 750; margin: 4px 0 12px; line-height: 1.25; }
+  .opt { display: flex; align-items: center; gap: 12px; padding: 10px 12px; border-radius: 14px; background: var(--panel2); border: 1px solid var(--line); margin-bottom: 7px; }
+  .opt.sel { border-color: var(--lime); box-shadow: 0 0 0 1px var(--lime) inset; }
+  .key { flex: none; width: 26px; height: 26px; border-radius: 8px; background: #0b1626; display: grid; place-items: center; font-weight: 800; color: var(--lime); font-size: 13px; }
+  .opt .t { font-weight: 650; font-size: 15px; }
+  .opt .d { font-size: 12px; color: var(--muted); margin-top: 1px; }
+  .zkey { width: 12px; height: 12px; border-radius: 3px; display: inline-block; margin-left: auto; }
+
+  .btns { display: flex; gap: 8px; margin-top: 12px; }
+  .btn { flex: 1; text-align: center; padding: 13px 10px; border-radius: 14px; font-weight: 700; font-size: 14px; }
+  .btn.pri { background: var(--lime); color: #0a1424; }
+  .btn.sec { background: var(--panel2); border: 1px solid var(--line); }
+
+  .badge { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 800; padding: 5px 10px; border-radius: 999px; }
+  .badge.err { background: rgba(255,107,91,.15); color: var(--coral); border: 1px solid rgba(255,107,91,.4); }
+  .badge.ok { background: rgba(61,220,151,.13); color: var(--green); border: 1px solid rgba(61,220,151,.4); }
+  .badge.dep { background: rgba(255,197,66,.14); color: var(--amber); border: 1px solid rgba(255,197,66,.45); }
+  .ev { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 800; letter-spacing: .03em; padding: 3px 8px; border-radius: 6px; margin-left: 4px; }
+  .ev.study { background: rgba(124,199,255,.14); color: #9fd3ff; border: 1px solid rgba(124,199,255,.35); }
+  .ev.fed { background: rgba(61,220,151,.12); color: #84e9bd; border: 1px solid rgba(61,220,151,.35); }
+  .ev.cons { background: rgba(199,155,255,.14); color: #d6b8ff; border: 1px solid rgba(199,155,255,.35); }
+  .box.yes { border-left: 3px solid var(--green); }
+  .box.warn { border-left: 3px solid var(--amber); }
+  .box ul { margin: 2px 0 0; padding-left: 16px; }
+  .box li { margin: 1px 0; }
+  .fb-title { font-size: 18px; font-weight: 750; margin: 10px 0 6px; line-height: 1.25; }
+  .fb-body { font-size: 13.5px; line-height: 1.5; color: #c9d6ee; margin: 0 0 10px; }
+  .box { background: var(--panel2); border: 1px solid var(--line); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; margin-bottom: 8px; }
+  .box .lbl { font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: .06em; color: var(--muted); margin-bottom: 3px; }
+  .source { font-size: 11.5px; color: var(--muted); display: flex; gap: 6px; align-items: center; }
+  .source i { font-style: normal; background: #0b1626; border: 1px dashed var(--line); padding: 2px 7px; border-radius: 6px; }
+
+  /* Encuesta */
+  .survey { flex: 1; padding: 4px 18px 20px; display: flex; flex-direction: column; }
+  .progress { height: 6px; background: var(--panel2); border-radius: 99px; overflow: hidden; margin: 4px 0 18px; }
+  .progress div { height: 100%; width: 28%; background: var(--lime); border-radius: 99px; }
+  .answered { display: flex; gap: 6px; margin-bottom: 18px; flex-wrap: wrap; }
+  .survey .q { font-size: 23px; margin-bottom: 6px; }
+  .help { font-size: 13.5px; color: var(--muted); line-height: 1.5; margin: 0 0 18px; }
+  .scard { display: flex; gap: 14px; align-items: center; padding: 14px; border-radius: 16px; background: var(--panel); border: 1px solid var(--line); margin-bottom: 10px; }
+  .scard.sel { border-color: var(--lime); box-shadow: 0 0 0 1px var(--lime) inset; }
+  .scard .t { font-weight: 700; font-size: 16px; }
+  .scard .d { font-size: 12.5px; color: var(--muted); margin-top: 2px; }
+  .survey .btn { flex: none; }
+  .upcoming { margin-top: auto; font-size: 12px; color: var(--muted); }
+  .upcoming ol { margin: 6px 0 14px; padding-left: 18px; line-height: 1.7; }
+
+  /* Resumen */
+  .summary { flex: 1; padding: 2px 16px 18px; display: flex; flex-direction: column; overflow: hidden; }
+  .result { border-radius: 18px; padding: 16px; background: linear-gradient(135deg, rgba(255,107,91,.25), rgba(255,107,91,.05)); border: 1px solid rgba(255,107,91,.35); }
+  .result .big { font-size: 22px; font-weight: 800; }
+  .result .sub { font-size: 13px; color: #f3c9c4; margin-top: 2px; }
+  .stats { display: flex; gap: 8px; margin: 12px 0; }
+  .stat { flex: 1; background: var(--panel); border: 1px solid var(--line); border-radius: 12px; padding: 8px; text-align: center; }
+  .stat .n { font-size: 20px; font-weight: 800; }
+  .stat .l { font-size: 11px; color: var(--muted); }
+  .tl-row { display: flex; gap: 10px; align-items: flex-start; padding: 8px 0; border-bottom: 1px solid var(--line); font-size: 13px; }
+  .tl-row:last-child { border-bottom: none; }
+  .tl-n { flex: none; width: 22px; height: 22px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #0a1424; }
+  .tl-row .k { color: var(--muted); font-size: 11.5px; }
+  .tl-row .v { font-weight: 650; }
+  .tl-row .fix { font-size: 11px; color: var(--amber); }
+  .redo { margin-left: auto; color: var(--lime); font-size: 12px; font-weight: 700; white-space: nowrap; }
+  .lesson { margin-top: 10px; background: var(--panel); border: 1px solid var(--line); border-left: 3px solid var(--lime); border-radius: 12px; padding: 10px 12px; font-size: 13px; line-height: 1.45; }
+</style>
+<style>
+  /* Versión a pantalla completa para celular: el "teléfono" ocupa toda la pantalla */
+  html, body { height: 100%; background: var(--bg); }
+  .phone.full { width: 100%; max-width: 520px; height: 100dvh; margin: 0 auto; border: 0; border-radius: 0; box-shadow: none; }
+  .phone.full .topbar { padding-top: max(12px, env(safe-area-inset-top)); }
+  .phone.full #proto-stage { height: 42dvh !important; }
+  .phone.full .sheet { padding-bottom: max(20px, env(safe-area-inset-bottom)); }
+</style>
+</head>
+<body>
+  <div class="phone full">
+    <div class="topbar"><span class="back" id="proto-back">← Decisión anterior</span><span class="ttl" id="proto-title">Punto 1 · Sacas tú</span><span class="score" id="proto-score">0 - 0</span></div>
+    <div class="trail" id="proto-trail"></div>
+    <div class="stage" id="proto-stage" style="flex:none;height:320px"></div>
+    <div class="sheet" id="proto-sheet" style="flex:1;overflow:auto"></div>
+  </div>
+<script type="module">
+// Utilidades 3D ligeras para las maquetas (Three.js, sin modelos externos).
+// Ejes: x = ancho (-5..5), y = altura, z = largo (-10..10). Red en z = 0.
+// El equipo del usuario está en z > 0 (cerca de la cámara).
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const C = {
+  user: 0xd7f548,
+  partner: 0x38d6b0,
+  rival: 0xff6b5b,
+  ball: 0xeaff4a,
+  good: 0x3ddc97,
+  ok: 0xffc542,
+  bad: 0xff6b5b,
+  white: 0xffffff,
+};
+
+const hex = (n) => '#' + n.toString(16).padStart(6, '0');
+
+function createStage(el, { cam, target, fov = 38 }) {
+  const w = el.clientWidth;
+  const h = el.clientHeight;
+  const renderer = new THREE.WebGLRenderer({ antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(w, h);
+  el.appendChild(renderer.domElement);
+
+  const scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x070f1c);
+
+  const camera = new THREE.PerspectiveCamera(fov, w / h, 0.1, 200);
+  camera.position.set(...cam);
+
+  // En celular el alto cambia (barra del navegador, girar la pantalla): ajusta el lienzo.
+  new ResizeObserver(() => {
+    const nw = el.clientWidth;
+    const nh = el.clientHeight;
+    if (!nw || !nh) return;
+    renderer.setSize(nw, nh);
+    camera.aspect = nw / nh;
+    camera.updateProjectionMatrix();
+  }).observe(el);
+
+  const controls = new OrbitControls(camera, renderer.domElement);
+  controls.target.set(...target);
+  controls.enableZoom = false;
+  controls.enablePan = false;
+  controls.enableDamping = true;
+  controls.minPolarAngle = 0.2;
+  controls.maxPolarAngle = 1.45;
+  controls.update();
+
+  scene.add(new THREE.HemisphereLight(0xffffff, 0x1a2a44, 1.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.5);
+  sun.position.set(6, 14, 8);
+  scene.add(sun);
+
+  buildCourt(scene);
+
+  const tickers = new Set();
+  const clock = new THREE.Clock();
+  renderer.setAnimationLoop(() => {
+    const t = clock.getElapsedTime();
+    for (const f of tickers) f(t);
+    controls.update();
+    renderer.render(scene, camera);
+  });
+
+  return {
+    scene, camera, controls, skip: false,
+    // Registra una función por cuadro; regresa una función para quitarla.
+    tick: (f) => (tickers.add(f), () => tickers.delete(f)),
+  };
+}
+
+// ---------- Animación (tweens) ----------
+
+const easeInOut = (k) => (k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2);
+const lerp = (a, b, k) => a + (b - a) * k;
+
+// Interpola de 0 a 1 en `dur` segundos. Si stage.skip está activo, salta al final.
+function tween(stage, dur, fn, ease = (k) => k) {
+  return new Promise((resolve) => {
+    if (dur <= 0 || stage.skip) {
+      fn(1);
+      return resolve();
+    }
+    const t0 = performance.now();
+    const rm = stage.tick(() => {
+      const k = stage.skip ? 1 : Math.min(1, (performance.now() - t0) / (dur * 1000));
+      fn(ease(k));
+      if (k >= 1) {
+        rm();
+        resolve();
+      }
+    });
+  });
+}
+
+const wait = (stage, s) => tween(stage, s, () => {});
+
+function tweenCamera(stage, pos, target, dur = 1) {
+  const p0 = stage.camera.position.clone();
+  const t0 = stage.controls.target.clone();
+  const p1 = new THREE.Vector3(...pos);
+  const t1 = new THREE.Vector3(...target);
+  return tween(stage, dur, (k) => {
+    stage.camera.position.lerpVectors(p0, p1, k);
+    stage.controls.target.lerpVectors(t0, t1, k);
+  }, easeInOut);
+}
+
+// ---------- Pista ----------
+
+function flat(geo, mat, x, y, z) {
+  const m = new THREE.Mesh(geo, mat);
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(x, y, z);
+  return m;
+}
+
+function box(scene, w, h, d, x, y, z, mat) {
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat);
+  m.position.set(x, y, z);
+  scene.add(m);
+  return m;
+}
+
+function meshTexture() {
+  const c = document.createElement('canvas');
+  c.width = c.height = 32;
+  const g = c.getContext('2d');
+  g.strokeStyle = 'rgba(180,195,215,0.55)';
+  g.lineWidth = 1.4;
+  g.beginPath();
+  g.moveTo(0, 0); g.lineTo(32, 32);
+  g.moveTo(32, 0); g.lineTo(0, 32);
+  g.stroke();
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  return t;
+}
+
+const glassMat = new THREE.MeshBasicMaterial({
+  color: 0x9fd8ff, transparent: true, opacity: 0.1, side: THREE.DoubleSide, depthWrite: false,
+});
+const glassEdge = new THREE.LineBasicMaterial({ color: 0xa9dcff, transparent: true, opacity: 0.7 });
+const meshEdge = new THREE.LineBasicMaterial({ color: 0x6b7a90, transparent: true, opacity: 0.55 });
+let meshTex;
+
+// Pared entre los puntos a=[x,z] y b=[x,z], de altura y0 a y1.
+function wall(scene, a, b, y0, y1, glass) {
+  const len = Math.hypot(b[0] - a[0], b[1] - a[1]);
+  const geo = new THREE.PlaneGeometry(len, y1 - y0);
+  let mat = glassMat;
+  if (!glass) {
+    meshTex ??= meshTexture();
+    const tex = meshTex.clone();
+    tex.needsUpdate = true;
+    tex.repeat.set(len / 0.35, (y1 - y0) / 0.35);
+    mat = new THREE.MeshBasicMaterial({
+      map: tex, transparent: true, side: THREE.DoubleSide, depthWrite: false,
+    });
+  }
+  const m = new THREE.Mesh(geo, mat);
+  const e = new THREE.LineSegments(new THREE.EdgesGeometry(geo), glass ? glassEdge : meshEdge);
+  const rotY = Math.atan2(-(b[1] - a[1]), b[0] - a[0]);
+  for (const o of [m, e]) {
+    o.position.set((a[0] + b[0]) / 2, (y0 + y1) / 2, (a[1] + b[1]) / 2);
+    o.rotation.y = rotY;
+    scene.add(o);
+  }
+}
+
+function buildCourt(scene) {
+  scene.add(flat(new THREE.PlaneGeometry(16, 26), new THREE.MeshLambertMaterial({ color: 0x10294c }), 0, -0.02, 0));
+  scene.add(flat(new THREE.PlaneGeometry(10, 20), new THREE.MeshLambertMaterial({ color: 0x2a6fd0 }), 0, 0, 0));
+
+  const line = new THREE.MeshBasicMaterial({ color: 0xffffff });
+  for (const z of [6.95, -6.95]) box(scene, 10, 0.004, 0.05, 0, 0.003, z, line);
+  box(scene, 0.05, 0.004, 14.3, 0, 0.003, 0, line);
+
+  // Red
+  const net = new THREE.Mesh(
+    new THREE.PlaneGeometry(10, 0.88),
+    new THREE.MeshBasicMaterial({ color: 0x05080f, transparent: true, opacity: 0.6, side: THREE.DoubleSide }),
+  );
+  net.position.set(0, 0.44, 0);
+  scene.add(net);
+  box(scene, 10, 0.05, 0.03, 0, 0.88, 0, new THREE.MeshBasicMaterial({ color: 0xf2f5fa }));
+  const post = new THREE.MeshLambertMaterial({ color: 0x1b2433 });
+  for (const x of [-5.05, 5.05]) box(scene, 0.08, 0.92, 0.08, x, 0.46, 0, post);
+
+  // Paredes de fondo: vidrio 3 m + reja 1 m
+  for (const z of [10, -10]) {
+    wall(scene, [-5, z], [5, z], 0, 3, true);
+    wall(scene, [-5, z], [5, z], 3, 4, false);
+  }
+  // Laterales: 2 m de vidrio a 3 m, 2 m de vidrio a 2 m, el resto reja
+  for (const x of [5, -5]) {
+    for (const s of [1, -1]) {
+      wall(scene, [x, 10 * s], [x, 8 * s], 0, 3, true);
+      wall(scene, [x, 10 * s], [x, 8 * s], 3, 4, false);
+      wall(scene, [x, 8 * s], [x, 6 * s], 0, 2, true);
+      wall(scene, [x, 8 * s], [x, 6 * s], 2, 3, false);
+    }
+    wall(scene, [x, 6], [x, -6], 0, 3, false);
+  }
+}
+
+// ---------- Etiquetas ----------
+
+function label(text, { bg = '#0f1d33', fg = '#ffffff', border = null, size = 0.42 } = {}) {
+  const fs = 44;
+  const pad = 20;
+  const c = document.createElement('canvas');
+  const g = c.getContext('2d');
+  const font = `700 ${fs}px system-ui, "Segoe UI", sans-serif`;
+  g.font = font;
+  c.width = Math.ceil(g.measureText(text).width + pad * 2);
+  c.height = Math.ceil(fs + pad * 1.3);
+  g.font = font;
+  g.fillStyle = bg;
+  g.beginPath();
+  g.roundRect(3, 3, c.width - 6, c.height - 6, c.height / 2 - 3);
+  g.fill();
+  if (border) {
+    g.strokeStyle = border;
+    g.lineWidth = 4;
+    g.stroke();
+  }
+  g.fillStyle = fg;
+  g.textAlign = 'center';
+  g.textBaseline = 'middle';
+  g.fillText(text, c.width / 2, c.height / 2 + 2);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, transparent: true }));
+  s.renderOrder = 10;
+  s.scale.set((size * c.width) / c.height, size, 1);
+  return s;
+}
+
+// ---------- Jugadores ----------
+
+// Cuerpo articulado simple: cada articulación es un Group que se rota.
+// El cuerpo se construye mirando hacia -z (hacia la red desde nuestro lado);
+// su derecha es +x. Rotación x positiva = llevar la extremidad hacia adelante.
+function limb(len, r, mat) {
+  const m = new THREE.Mesh(new THREE.CapsuleGeometry(r, len - 2 * r, 4, 10), mat);
+  m.position.y = -len / 2;
+  return m;
+}
+
+function joint(parent, x, y, z) {
+  const j = new THREE.Group();
+  j.position.set(x, y, z);
+  parent.add(j);
+  return j;
+}
+
+function buildBody(color, op) {
+  const shirt = new THREE.MeshLambertMaterial({ color, ...op });
+  const skin = new THREE.MeshLambertMaterial({ color: 0xf1c9a5, ...op });
+  const shorts = new THREE.MeshLambertMaterial({ color: 0x1b2433, ...op });
+  const shoe = new THREE.MeshLambertMaterial({ color: 0xf4f6fa, ...op });
+  const dark = new THREE.MeshLambertMaterial({ color: 0x141b26, ...op });
+
+  const root = new THREE.Group();
+  const hips = joint(root, 0, 0.95, 0);
+  const j = {};
+
+  // Torso y cabeza
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 0.36, 4, 12), shirt);
+  torso.position.y = 0.3;
+  torso.scale.set(1.15, 1, 0.75);
+  const pelvis = new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.18, 0.2, 14), shorts);
+  pelvis.position.y = 0.02;
+  hips.add(torso, pelvis);
+  j.hips = hips;
+  const neck = joint(hips, 0, 0.62, 0);
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.12, 18, 14), skin);
+  head.position.y = 0.12;
+  const cap = new THREE.Mesh(new THREE.SphereGeometry(0.125, 18, 10, 0, Math.PI * 2, 0, Math.PI / 2.2), shirt);
+  cap.position.y = 0.13;
+  neck.add(head, cap);
+
+  // Piernas
+  for (const side of ['L', 'R']) {
+    const sx = side === 'R' ? 0.1 : -0.1;
+    const thigh = joint(hips, sx, -0.02, 0);
+    thigh.add(limb(0.44, 0.075, shorts));
+    const knee = joint(thigh, 0, -0.44, 0);
+    knee.add(limb(0.44, 0.06, skin));
+    const foot = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.07, 0.24), shoe);
+    foot.position.set(0, -0.46, -0.06);
+    knee.add(foot);
+    j['thigh' + side] = thigh;
+    j['knee' + side] = knee;
+  }
+
+  // Brazos
+  for (const side of ['L', 'R']) {
+    const sx = side === 'R' ? 0.23 : -0.23;
+    const shoulder = joint(hips, sx, 0.5, 0);
+    shoulder.add(limb(0.3, 0.05, shirt));
+    const elbow = joint(shoulder, 0, -0.3, 0);
+    elbow.add(limb(0.27, 0.045, skin));
+    const hand = new THREE.Mesh(new THREE.SphereGeometry(0.05, 10, 8), skin);
+    hand.position.y = -0.28;
+    elbow.add(hand);
+    j['shoulder' + side] = shoulder;
+    j['elbow' + side] = elbow;
+    if (side === 'R') {
+      // Pala: mango en la mano y la cara siguiendo la línea del antebrazo
+      const racket = joint(elbow, 0, -0.29, 0);
+      const handle = new THREE.Mesh(new THREE.CylinderGeometry(0.02, 0.022, 0.16, 8), dark);
+      handle.position.y = -0.06;
+      const face = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.15, 0.035, 22), dark);
+      face.rotation.x = Math.PI / 2;
+      face.scale.set(1, 1, 1.12);
+      face.position.y = -0.3;
+      const rim = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.012, 6, 28), shirt);
+      rim.position.y = -0.3;
+      racket.add(handle, face, rim);
+      j.racket = racket;
+    }
+  }
+  return { root, j };
+}
+
+// Posturas: valores de rotación por articulación [x, y, z].
+const POSES = {
+  // Posición de espera: rodillas flexionadas, pala al frente a la altura del pecho
+  ready: {
+    drop: 0.1,
+    thighL: [0.45, 0, -0.18], kneeL: [-0.75, 0, 0],
+    thighR: [0.45, 0, 0.18], kneeR: [-0.75, 0, 0],
+    hips: [0.2, 0, 0],
+    shoulderR: [0.75, 0, 0.25], elbowR: [1.1, 0, 0], racket: [0.4, 0, 0],
+    shoulderL: [0.7, 0, -0.25], elbowL: [1.2, 0, 0],
+  },
+  // Saque: pelota en la mano izquierda, pala atrás por debajo de la cintura
+  serve: {
+    drop: 0.04,
+    thighL: [0.35, 0, -0.05], kneeL: [-0.3, 0, 0],
+    thighR: [-0.25, 0, 0.08], kneeR: [-0.35, 0, 0],
+    hips: [0.12, 0.35, 0],
+    shoulderR: [-0.6, 0, 0.3], elbowR: [0.5, 0, 0], racket: [0.3, 0, 0],
+    shoulderL: [0.9, 0, -0.15], elbowL: [0.3, 0, 0],
+  },
+  // Revés: perfilado con el hombro derecho hacia la red, pala preparada del lado izquierdo
+  backhand: {
+    drop: 0.12,
+    rotY: 0.9,
+    thighL: [0.2, 0, -0.2], kneeL: [-0.6, 0, 0],
+    thighR: [0.55, 0, 0.1], kneeR: [-0.8, 0, 0],
+    hips: [0.25, 0, 0],
+    shoulderR: [0.55, 0, -1.05], elbowR: [0.7, 0, 0], racket: [0.4, 0, 0],
+    shoulderL: [0.45, 0, -0.35], elbowL: [0.9, 0, 0],
+  },
+  // Golpe por arriba (bandeja / remate): perfilado, brazo izquierdo apunta a la pelota
+  overhead: {
+    drop: 0.03,
+    rotY: -1.0,
+    thighL: [0.35, 0, -0.1], kneeL: [-0.25, 0, 0],
+    thighR: [-0.35, 0, 0.1], kneeR: [-0.4, 0, 0],
+    hips: [-0.05, 0, 0],
+    shoulderR: [2.5, 0, 0.55], elbowR: [1.6, 0, 0], racket: [0.5, 0, 0],
+    shoulderL: [2.7, 0, -0.2], elbowL: [0.15, 0, 0],
+  },
+  // Globo / golpe bajo: pala abajo terminando hacia arriba
+  lob: {
+    drop: 0.12,
+    thighL: [0.55, 0, -0.15], kneeL: [-0.9, 0, 0],
+    thighR: [0.1, 0, 0.2], kneeR: [-0.7, 0, 0],
+    hips: [0.25, -0.3, 0],
+    shoulderR: [1.6, 0, 0.35], elbowR: [0.25, 0, 0], racket: [-0.3, 0, 0],
+    shoulderL: [0.4, 0, -0.5], elbowL: [0.6, 0, 0],
+  },
+  // Final del saque: la pala terminó adelante
+  serveHit: {
+    drop: 0.05,
+    thighL: [0.4, 0, -0.05], kneeL: [-0.35, 0, 0],
+    thighR: [-0.15, 0, 0.08], kneeR: [-0.5, 0, 0],
+    hips: [0.2, -0.25, 0],
+    shoulderR: [1.35, 0, 0.1], elbowR: [0.5, 0, 0], racket: [0.3, 0, 0],
+    shoulderL: [0.5, 0, -0.3], elbowL: [0.6, 0, 0],
+  },
+  // Final de bandeja / remate: el brazo bajó hacia adelante
+  overheadHit: {
+    drop: 0.05,
+    rotY: -0.35,
+    thighL: [0.4, 0, -0.1], kneeL: [-0.3, 0, 0],
+    thighR: [-0.3, 0, 0.1], kneeR: [-0.45, 0, 0],
+    hips: [0.15, 0, 0],
+    shoulderR: [1.5, 0, -0.2], elbowR: [0.35, 0, 0], racket: [0.2, 0, 0],
+    shoulderL: [0.6, 0, -0.4], elbowL: [0.9, 0, 0],
+  },
+  // Volea baja: muy flexionado, pala abajo al frente
+  volley: {
+    drop: 0.28,
+    thighL: [0.9, 0, -0.2], kneeL: [-1.4, 0, 0],
+    thighR: [0.3, 0, 0.25], kneeR: [-1.3, 0, 0],
+    hips: [0.45, 0, 0],
+    shoulderR: [0.6, 0, 0.35], elbowR: [0.2, 0, 0], racket: [-0.2, 0, 0],
+    shoulderL: [0.5, 0, -0.4], elbowL: [1.0, 0, 0],
+  },
+};
+
+const JOINTS = ['hips', 'thighL', 'kneeL', 'thighR', 'kneeR', 'shoulderL', 'elbowL', 'shoulderR', 'elbowR', 'racket'];
+const LABEL_Y = (pose) => (pose === 'overhead' ? 2.75 : 2.3);
+
+function applyPose(body, name) {
+  const p = POSES[name] || POSES.ready;
+  body.root.position.y = -(p.drop || 0);
+  body.root.rotation.y = p.rotY || 0;
+  for (const k of JOINTS) {
+    const v = p[k] || [0, 0, 0];
+    body.j[k].rotation.set(v[0], v[1], v[2]);
+  }
+}
+
+// Cambia de postura con transición suave.
+function setPose(stage, player, name, dur = 0.25) {
+  const { body, label: l } = player.userData;
+  const p = POSES[name] || POSES.ready;
+  const from = JOINTS.map((k) => [body.j[k].rotation.x, body.j[k].rotation.y, body.j[k].rotation.z]);
+  const to = JOINTS.map((k) => p[k] || [0, 0, 0]);
+  const y0 = body.root.position.y;
+  const r0 = body.root.rotation.y;
+  const ly0 = l ? l.position.y : 0;
+  player.userData.pose = name;
+  return tween(stage, dur, (k) => {
+    JOINTS.forEach((key, i) => body.j[key].rotation.set(
+      lerp(from[i][0], to[i][0], k), lerp(from[i][1], to[i][1], k), lerp(from[i][2], to[i][2], k),
+    ));
+    body.root.position.y = lerp(y0, -(p.drop || 0), k);
+    body.root.rotation.y = lerp(r0, p.rotY || 0, k);
+    if (l) l.position.y = lerp(ly0, LABEL_Y(name), k);
+  }, easeInOut);
+}
+
+// Desplaza al jugador corriendo (las piernas se mueven) y termina en su postura actual.
+function moveTo(stage, player, [x, z], dur) {
+  const { body } = player.userData;
+  const x0 = player.position.x;
+  const z0 = player.position.z;
+  const dist = Math.hypot(x - x0, z - z0);
+  if (dist < 0.01) return Promise.resolve();
+  const steps = Math.max(2, Math.round(dist / 0.7));
+  return tween(stage, dur, (k) => {
+    player.position.set(lerp(x0, x, k), 0, lerp(z0, z, k));
+    const s = Math.sin(k * steps * Math.PI) * (k < 1 ? 0.55 : 0);
+    const p = POSES[player.userData.pose] || POSES.ready;
+    body.j.thighL.rotation.x = (p.thighL?.[0] || 0) + s;
+    body.j.thighR.rotation.x = (p.thighR?.[0] || 0) - s;
+  }, easeInOut);
+}
+
+// Coloca a un jugador al instante (para regresar a una decisión anterior).
+function placePlayer(player, [x, z], pose) {
+  player.position.set(x, 0, z);
+  player.userData.pose = pose;
+  applyPose(player.userData.body, pose);
+  if (player.userData.label) player.userData.label.position.y = LABEL_Y(pose);
+}
+
+// Capa de efectos temporales (trayectorias, zonas, marcas) que se puede borrar de golpe.
+// Se usa como si fuera un "stage": las funciones de dibujo solo usan .scene y .tick.
+function fxLayer(stage) {
+  const group = new THREE.Group();
+  stage.scene.add(group);
+  return {
+    scene: group,
+    tick: stage.tick,
+    clear() {
+      for (const c of [...group.children]) group.remove(c);
+    },
+  };
+}
+
+// ---------- Pelota en juego ----------
+
+function createBall(stage) {
+  const mesh = new THREE.Mesh(
+    new THREE.SphereGeometry(0.11, 20, 14),
+    new THREE.MeshStandardMaterial({ color: C.ball, emissive: C.ball, emissiveIntensity: 0.45 }),
+  );
+  const shadow = flat(new THREE.CircleGeometry(0.12, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false }), 0, 0.016, 0);
+  stage.scene.add(mesh, shadow);
+  const ball = {
+    mesh,
+    set(p) {
+      mesh.position.copy(p);
+      shadow.position.set(p.x, 0.016, p.z);
+    },
+    show(v) {
+      mesh.visible = shadow.visible = v;
+    },
+  };
+  ball.show(false);
+  return ball;
+}
+
+function pathInfo(pts) {
+  const dist = [0];
+  for (let i = 1; i < pts.length; i++) dist.push(dist[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  const total = dist[dist.length - 1];
+  const at = (f) => {
+    const d = Math.max(0, Math.min(1, f)) * total;
+    let i = 1;
+    while (i < dist.length - 1 && dist[i] < d) i++;
+    const k = (d - dist[i - 1]) / (dist[i] - dist[i - 1] || 1);
+    return pts[i - 1].clone().lerp(pts[i], k);
+  };
+  return { total, at };
+}
+
+// Mueve la pelota por la trayectoria, de la fracción `from` a `to`, en `dur` segundos.
+function flyBall(stage, ball, pts, dur, from = 0, to = 1) {
+  const info = pathInfo(pts);
+  ball.show(true);
+  return tween(stage, dur, (k) => ball.set(info.at(lerp(from, to, k))));
+}
+
+function addPlayer(stage, { x, z, color, text, you = false, ghost = false, facing = -1, pose = 'ready' }) {
+  const g = new THREE.Group();
+  g.position.set(x, 0, z);
+  const op = ghost ? { transparent: true, opacity: 0.35, depthWrite: false } : {};
+  const body = buildBody(color, op);
+  applyPose(body, pose);
+  // Los rivales miran hacia +z
+  const facer = new THREE.Group();
+  facer.rotation.y = facing === 1 ? Math.PI : 0;
+  facer.add(body.root);
+  const shadow = flat(new THREE.CircleGeometry(0.42, 24), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: ghost ? 0.12 : 0.3, depthWrite: false }), 0, 0.006, 0);
+  g.add(shadow, facer);
+
+  if (you && !ghost) {
+    const ring = flat(new THREE.RingGeometry(0.5, 0.62, 48), new THREE.MeshBasicMaterial({ color: C.user, transparent: true, side: THREE.DoubleSide }), 0, 0.012, 0);
+    g.add(ring);
+    stage.tick((t) => {
+      const k = 1 + 0.12 * Math.sin(t * 4);
+      ring.scale.set(k, k, 1);
+      ring.material.opacity = 0.65 + 0.35 * Math.sin(t * 4);
+    });
+  }
+  if (text) {
+    const l = label(text, { bg: ghost ? 'rgba(15,29,51,.75)' : '#0f1d33', fg: hex(color), border: hex(color), size: 0.55 });
+    l.position.set(0, LABEL_Y(pose), 0);
+    g.add(l);
+    g.userData.label = l;
+  }
+  g.userData.body = body;
+  g.userData.pose = pose;
+  stage.scene.add(g);
+  return g;
+}
+
+// ---------- Zonas, flechas y marcas ----------
+
+function addZone(stage, { x, z, w, d, color, text }) {
+  const geo = new THREE.PlaneGeometry(w, d);
+  const fill = flat(geo, new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.3, depthWrite: false, side: THREE.DoubleSide }), x, 0.01, z);
+  const edge = new THREE.LineSegments(new THREE.EdgesGeometry(geo), new THREE.LineBasicMaterial({ color }));
+  edge.rotation.x = -Math.PI / 2;
+  edge.position.set(x, 0.012, z);
+  stage.scene.add(fill, edge);
+  const rm = stage.tick((t) => {
+    if (!fill.parent) return rm(); // la zona se borró (efectos temporales)
+    fill.material.opacity = 0.22 + 0.12 * Math.sin(t * 3 + x);
+  });
+  if (text) {
+    const l = label(text, { bg: hex(color), fg: '#08111f', size: 0.7 });
+    l.position.set(x, 0.6, z);
+    stage.scene.add(l);
+  }
+}
+
+function floorArrow(stage, from, to, color, opacity = 0.9) {
+  const dx = to[0] - from[0];
+  const dz = to[1] - from[1];
+  const L = Math.hypot(dx, dz);
+  const head = Math.min(0.55, L * 0.4);
+  const s = new THREE.Shape();
+  s.moveTo(0, -0.09);
+  s.lineTo(L - head, -0.09);
+  s.lineTo(L - head, -0.28);
+  s.lineTo(L, 0);
+  s.lineTo(L - head, 0.28);
+  s.lineTo(L - head, 0.09);
+  s.lineTo(0, 0.09);
+  s.closePath();
+  const m = new THREE.Mesh(new THREE.ShapeGeometry(s), new THREE.MeshBasicMaterial({ color, transparent: true, opacity, side: THREE.DoubleSide, depthWrite: false }));
+  m.rotation.x = -Math.PI / 2;
+  const g = new THREE.Group();
+  g.add(m);
+  g.position.set(from[0], 0.015, from[1]);
+  g.rotation.y = Math.atan2(-dz, dx);
+  stage.scene.add(g);
+}
+
+function bounceMark(stage, x, z, color = C.ball) {
+  const r = flat(new THREE.RingGeometry(0.14, 0.24, 32), new THREE.MeshBasicMaterial({ color, side: THREE.DoubleSide }), x, 0.014, z);
+  stage.scene.add(r);
+}
+
+// ---------- Trayectorias ----------
+
+// Parábola aproximada entre p0 y p1 (cada uno [x, y, z]) con altura máxima ~apex.
+function arc(p0, p1, apex, n = 48) {
+  const c = 2 * apex - 0.5 * (p0[1] + p1[1]);
+  const pts = [];
+  for (let i = 0; i <= n; i++) {
+    const t = i / n;
+    const u = 1 - t;
+    pts.push(new THREE.Vector3(
+      p0[0] + (p1[0] - p0[0]) * t,
+      u * u * p0[1] + 2 * t * u * c + t * t * p1[1],
+      p0[2] + (p1[2] - p0[2]) * t,
+    ));
+  }
+  return pts;
+}
+
+function joinArcs(...arcs) {
+  return arcs.reduce((all, a, i) => all.concat(i === 0 ? a : a.slice(1)), []);
+}
+
+const dotGeo = new THREE.SphereGeometry(0.05, 10, 8);
+
+function drawPath(stage, pts, { color = C.ball, opacity = 1, spacing = 0.32, shadow = true } = {}) {
+  const mat = new THREE.MeshBasicMaterial({ color, transparent: opacity < 1, opacity });
+  let acc = spacing;
+  for (let i = 1; i < pts.length; i++) {
+    acc += pts[i].distanceTo(pts[i - 1]);
+    if (acc >= spacing) {
+      acc = 0;
+      const d = new THREE.Mesh(dotGeo, mat);
+      d.position.copy(pts[i]);
+      stage.scene.add(d);
+    }
+  }
+  if (shadow) {
+    const sp = pts.map((p) => new THREE.Vector3(p.x, 0.013, p.z));
+    const l = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints(sp),
+      new THREE.LineDashedMaterial({ color: 0x000000, transparent: true, opacity: 0.45 * opacity, dashSize: 0.22, gapSize: 0.16 }),
+    );
+    l.computeLineDistances();
+    stage.scene.add(l);
+  }
+}
+
+function animateBall(stage, pts, { speed = 8, pause = 0.9 } = {}) {
+  const dist = [0];
+  for (let i = 1; i < pts.length; i++) dist.push(dist[i - 1] + pts[i].distanceTo(pts[i - 1]));
+  const total = dist[dist.length - 1];
+  const ball = new THREE.Mesh(
+    new THREE.SphereGeometry(0.11, 20, 14),
+    new THREE.MeshStandardMaterial({ color: C.ball, emissive: C.ball, emissiveIntensity: 0.45 }),
+  );
+  const sh = flat(new THREE.CircleGeometry(0.12, 20), new THREE.MeshBasicMaterial({ color: 0x000000, transparent: true, opacity: 0.45, depthWrite: false }), 0, 0.016, 0);
+  stage.scene.add(ball, sh);
+  stage.tick((t) => {
+    const d = Math.min((t * speed) % (total + pause * speed), total);
+    let i = 1;
+    while (i < dist.length - 1 && dist[i] < d) i++;
+    const k = (d - dist[i - 1]) / (dist[i] - dist[i - 1] || 1);
+    ball.position.lerpVectors(pts[i - 1], pts[i], k);
+    sh.position.set(ball.position.x, 0.016, ball.position.z);
+  });
+}
+
+// Línea vertical punteada del piso a un punto, con la altura escrita.
+function heightMarker(stage, p, text, color = C.white) {
+  const l = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(p.x, 0, p.z), p.clone()]),
+    new THREE.LineDashedMaterial({ color, dashSize: 0.12, gapSize: 0.08 }),
+  );
+  l.computeLineDistances();
+  const tag = label(text, { bg: '#0f1d33', fg: hex(color), border: hex(color), size: 0.55 });
+  tag.position.set(p.x, p.y + 0.5, p.z);
+  const dot = new THREE.Mesh(new THREE.SphereGeometry(0.09, 14, 10), new THREE.MeshBasicMaterial({ color }));
+  dot.position.copy(p);
+  stage.scene.add(l, tag, dot);
+}
+
+function floatLabel(stage, text, [x, y, z], color = C.white) {
+  const l = label(text, { bg: '#0f1d33', fg: hex(color), border: hex(color), size: 0.5 });
+  l.position.set(x, y, z);
+  stage.scene.add(l);
+}
+
+// Prototipo jugable: un punto completo, decisión → animación → siguiente decisión,
+// hasta ganar o perder el punto; después la transición al siguiente punto.
+
+{
+  const $ = (id) => document.getElementById(id);
+  const sheet = $('proto-sheet');
+  const backEl = $('proto-back');
+
+  // m = 1: sacas desde la derecha (lado del drive); m = -1: desde la izquierda (lado del revés)
+  const S = { m: 1, point: 1, score: [0, 0], scoreBefore: null, choices: [], stack: [], node: null, view: null, pending: null, busy: false };
+  const X = (x) => x * S.m;
+
+  // Cuando sacas desde el lado del revés (m = -1) juegan en formación australiana (escenario E1):
+  // tú sacas cerca del centro, tu compañero espera en la red de ese mismo lado y tú cruzas
+  // en diagonal a la red de tu lado (derecha). Después del saque tú siempre terminas a la
+  // derecha (x > 0) y tu compañero a la izquierda (x < 0), así que esas coordenadas no usan X().
+  const aus = () => S.m === -1;
+  const serveSpot = () => (aus() ? [-0.6, 7.8] : [2.5, 7.8]);
+  const partnerSpot = () => (aus() ? [-1.5, 2.8] : [-2.5, 2.8]);
+  const serveHitPos = () => [serveSpot()[0] - 0.2 * S.m, 0.8, 7.5];
+  const drawRun = () => {
+    if (!aus()) return;
+    floorArrow(fx, [serveSpot()[0] + 0.4, 7.2], [2.2, 3.7], C.user, 0.45);
+    floatLabel(fx, 'Tu camino a la red', [1.1, 0.9, 5.4], C.user);
+  };
+
+  const CAM = {
+    serve: () => [[X(3), 9.5, 16], [X(-0.6), 0, 0.6]],
+    lob: () => [[10.5, 3.4, 5.2], [0, 2.7, 3.6]],
+    wide: () => [[X(4.5), 13, 15.5], [0, 0, 0]],
+  };
+
+  const stage = createStage($('proto-stage'), { cam: CAM.serve()[0], target: CAM.serve()[1] });
+  const fx = fxLayer(stage);
+  const user = addPlayer(stage, { x: 2.5, z: 7.8, color: C.user, text: 'Tú', you: true, pose: 'serve' });
+  const partner = addPlayer(stage, { x: -2.5, z: 2.8, color: C.partner, text: 'Compañero' });
+  const rDrive = addPlayer(stage, { x: -2.6, z: -8.6, color: C.rival, text: 'Rival · drive', facing: 1 });
+  const rReves = addPlayer(stage, { x: 2.5, z: -5.8, color: C.rival, text: 'Rival · revés', facing: 1 });
+  const ball = createBall(stage);
+  const rec = () => (S.m === 1 ? rDrive : rReves); // quien resta (en diagonal)
+  const recP = () => (S.m === 1 ? rReves : rDrive);
+  const choice = (node) => S.choices.find((c) => c.node === node)?.id;
+
+  function startLayout() {
+    placePlayer(user, serveSpot(), 'serve');
+    placePlayer(partner, partnerSpot(), 'ready');
+    placePlayer(rec(), [X(-2.6), -8.6], 'ready');
+    placePlayer(recP(), [X(2.5), -5.8], 'ready');
+    ball.show(false);
+  }
+
+  // ---------- Contenido: decisiones y feedback ----------
+
+  const NODES = {
+    speed: {
+      kicker: 'Decisión · Saque', short: 'Tipo de saque',
+      ctx: () => (S.m === 1
+        ? 'Sacas desde la derecha (tu lado de drive) hacia el rival de drive.'
+        : 'Ahora sacas desde el lado del revés, en formación australiana: tu compañero espera en la red de este lado y tú, al sacar, cruzas a la red de tu lado (derecha).'),
+      q: '¿Cómo sacas?',
+      opts: [
+        { id: 'lento', t: 'Lento con efecto', d: 'Más control y colocación', s: 'Lento' },
+        { id: 'rapido', t: 'Rápido y plano', d: 'Más velocidad, menos control', s: 'Rápido' },
+      ],
+      fx: () => drawRun(),
+      fb: (id) => {
+        if (aus()) {
+          return id === 'lento'
+            ? { r: 'g', ev: ['fed', 'study'], title: 'Saque con efecto, profundo y a velocidad media', body: 'En australiana tienes que cruzar en diagonal hasta la red de tu lado. Este saque te da el tiempo para llegar.', src: 'Guía de saque de la LTA; en australiana el sacador corre más metros y más rápido (Ramón-Llin et al., 2021).' }
+            : { r: 'a', ev: ['study', 'cons'], title: 'Saque rápido y plano', body: 'Lo que ganas en velocidad lo pierdes en tiempo para cruzar a tu lado.', yes: ['Eres rápido de piernas y es tu primer saque.', 'El restador se incomoda con la velocidad.'], warn: ['El resto regresa antes de que llegues y el paralelo cae en el hueco que vas cubriendo.'], src: 'Contra la australiana los restadores juegan más paralelo (Cerrillo-Lafuente et al., 2025).' };
+        }
+        return id === 'lento'
+          ? { r: 'g', ev: ['cons'], title: 'Saque lento con efecto', body: 'Es el saque que más se enseña: te da tiempo de subir a la red antes de que el rival reste y es más fácil de colocar.' }
+          : { r: 'a', ev: ['cons'], title: 'Saque rápido y plano', body: 'Puede sorprender, pero la pelota regresa igual de rápido.', yes: ['Lo usas de sorpresa, de vez en cuando.'], warn: ['El resto te puede agarrar a media pista, antes de llegar a la red.', 'Plano y fuerte, es más fácil fallarlo.'] };
+      },
+      after: async () => 'dir',
+    },
+
+    dir: {
+      kicker: 'Decisión · Saque', short: 'Dirección',
+      q: '¿A dónde mandas el saque?',
+      opts: [
+        { id: 'T', t: 'A la T', d: 'Al centro, cerca de la línea de saque', s: 'A la T' },
+        { id: 'vidrio', t: 'Al vidrio', d: 'Hacia la pared lateral del que resta', s: 'Al vidrio' },
+        { id: 'cuerpo', t: 'Al cuerpo', d: 'Directo a donde está parado el que resta', s: 'Al cuerpo' },
+      ],
+      fx: () => {
+        const z = [['T', -0.75, 0xd7f548], ['vidrio', -4.25, 0x7cc7ff], ['cuerpo', -2.4, 0xc79bff]];
+        z.forEach(([, x, color], i) => {
+          addZone(fx, { x: X(x), z: -5.9, w: 1.2, d: 1.6, color, text: 'ABC'[i] });
+          drawPath(fx, arc(serveHitPos(), [X(x), 0, -5.9], 1.9), { color, opacity: 0.3, spacing: 0.45, shadow: false });
+        });
+        drawRun();
+      },
+      fb: (id) => {
+        const study = 'En profesionales casi todos sacan al vidrio, pero la T se asoció con más puntos ganados (Mauro et al., 2025).';
+        if (id === 'vidrio') {
+          return { r: 'g', ev: ['study'], title: 'Saque al vidrio',
+            body: S.m === 1
+              ? 'Es el saque más usado: la pelota se abre hacia la pared lateral y obliga a restar con el vidrio.'
+              : 'Es el saque más usado, y contra el de revés además le llega por su lado de revés.',
+            src: 'Más del 78 % de los saques de hombres profesionales van al vidrio (Bueno-García et al., 2024).' };
+        }
+        if (id === 'T') {
+          return S.m === 1
+            ? { r: 'a', ev: ['study', 'cons'], title: 'Saque a la T contra el de drive', body: 'La T le queda a su revés. No es mala idea; depende del rival.', yes: ['Su revés es más débil que su derecha.', 'Lo alternas con el vidrio para que no se acomode.'], warn: ['Tiene buen revés y el saque te queda sin efecto.'], src: study }
+            : { r: 'a', ev: ['study', 'cons'], title: 'Saque a la T contra el de revés', body: 'Contra un diestro que juega de revés, la T le queda a su derecha.', yes: ['Lo usas de sorpresa porque casi siempre le sacas al vidrio.'], warn: ['Tiene buena derecha: resta cómodo por el centro.'], src: study };
+        }
+        return { r: 'a', ev: ['cons'], title: 'Saque al cuerpo', body: 'Le quitas espacio para preparar el golpe.', yes: ['Lleva velocidad y le llega pegado al cuerpo.'], warn: ['Queda lento o corto: tiene tiempo de acomodarse.'] };
+      },
+      after: (id) => animServe(id),
+    },
+
+    move: {
+      kicker: 'Decisión · Después de sacar', short: 'Después de sacar',
+      ctx: () => 'La pelota va hacia el rival que resta.',
+      fx: () => {
+        drawPath(fx, S.servePath, { opacity: 0.35, spacing: 0.45 });
+        bounceMark(fx, S.bounce[0], S.bounce[2]);
+        drawRun();
+      },
+      q: '¿Qué haces tú?',
+      get opts() {
+        return [
+          { id: 'red', t: aus() ? 'Cruzo a la red de mi lado' : 'Subo a la red', d: aus() ? 'En diagonal, hasta la derecha' : 'Junto a mi compañero', s: 'A la red' },
+          { id: 'mitad', t: 'Me quedo a media pista', d: 'A ver qué hace el rival', s: 'Media pista' },
+          { id: 'atras', t: 'Me quedo en el fondo', d: 'Espero el resto desde atrás', s: 'Atrás' },
+        ];
+      },
+      fb: (id) => ({
+        red: { r: 'g', ev: ['study'], title: aus() ? 'Cruzar a la red de tu lado' : 'Subir a la red', body: aus() ? 'En australiana cruzas en diagonal a la red de tu lado; tu compañero ya cubre el cruzado.' : 'Después de sacar, la idea es ganar la red junto a tu compañero.', src: 'Más del 80 % de los puntos en profesional se ganan desde la red (Courel-Ibáñez et al., 2015).' },
+        mitad: { r: 'r', ev: ['cons'], title: 'Quedarte a media pista', body: aus() ? 'Te quedas a medio camino: el lado derecho queda abierto para un resto paralelo.' : 'Es la zona más difícil: no estás ni en la red ni atrás, y el rival puede tirarte la pelota a los pies.' },
+        atras: { r: 'r', ev: aus() ? ['fed', 'study'] : ['cons'], title: 'Quedarte en el fondo', body: aus() ? 'En australiana tu lado queda vacío: el rival solo tiene que jugar paralelo.' : 'Le regalas la red a la pareja rival y dejas a tu compañero solo adelante.' },
+      })[id],
+      after: (id) => animMove(id),
+    },
+
+    lob: {
+      kicker: 'Decisión · Te tiran un globo', short: 'Globo',
+      ctx: () => 'Estás en la red y el rival te pasa un globo a media altura. Ya vas retrocediendo.',
+      q: '¿Qué golpe usas?',
+      opts: [
+        { id: 'remate', t: 'Remate', d: 'Pegarle con todo para cerrar el punto', s: 'Remate' },
+        { id: 'bandeja', t: 'Bandeja', d: 'Por arriba, controlado, sin mucha potencia', s: 'Bandeja' },
+        { id: 'vibora', t: 'Víbora', d: 'Por arriba con efecto lateral, más agresiva', s: 'Víbora' },
+        { id: 'botar', t: 'Dejarla botar', d: 'Ir atrás y jugarla después del vidrio', s: 'La dejo botar' },
+      ],
+      fx: () => {
+        drawPath(fx, S.lob, { opacity: 0.35, spacing: 0.4 });
+        heightMarker(fx, S.hitP, `Le pegas a ${S.hitP.y.toFixed(1)} m`, C.user);
+      },
+      fb: (id) => ({
+        bandeja: { r: 'g', ev: ['study'], title: 'Bandeja', body: 'Golpe controlado que te deja seguir en la red.', src: 'La bandeja da continuidad al punto en ~90 % de los casos (Sánchez-Alcaraz et al., 2020).' },
+        remate: { r: 'r', ev: ['study'], title: 'Remate fuerte desde media pista', body: 'Lejos de la red el remate pierde eficacia: la pelota regresa del vidrio y el rival defiende.', src: 'El remate pierde eficacia al alejarse de la red (Sánchez-Alcaraz et al., 2020).' },
+        vibora: { r: 'a', ev: ['cons'], title: 'Víbora', body: 'Más agresiva que la bandeja, con efecto lateral.', yes: ['Dominas el golpe y la pelota te llega a buena altura.'], warn: ['Es más difícil: arriesgas un error no forzado.'] },
+        botar: { r: 'a', ev: ['cons'], title: 'Dejarla botar', body: 'Válido cuando el globo te rebasa, pero pierdes la red.', yes: ['El globo es muy profundo y no llegas bien por arriba.'], warn: ['Le das la red a los rivales.'] },
+      })[id],
+      after: (id) => animLob(id),
+    },
+  };
+
+  // ---------- Animaciones ----------
+
+  function playing(text) {
+    sheet.innerHTML = `<div class="kicker">▶ Jugando el punto</div><div class="q" style="font-size:16px;font-weight:650">${text}</div>
+      <div class="btns"><div class="btn sec" data-act="skip">⏩ Saltar animación</div></div>`;
+  }
+
+  async function animServe(dir) {
+    fx.clear();
+    const fast = choice('speed') === 'rapido';
+    const tx = { T: -0.75, vidrio: -4.25, cuerpo: -2.4 }[dir];
+    const rp = rec().position;
+    const hit = serveHitPos();
+    const bounce = [X(tx), 0, -5.9];
+    S.recHit = [(bounce[0] + rp.x) / 2, 0.9, rp.z + 0.4];
+    const serveArc = arc(hit, bounce, fast ? 1.45 : 2.0);
+    S.afterArc = arc(bounce, S.recHit, fast ? 1.4 : 1.1, 20);
+    S.servePath = joinArcs(serveArc, S.afterArc);
+    S.bounce = bounce;
+    drawPath(fx, S.servePath, { opacity: 0.35, spacing: 0.45 });
+    playing(fast ? 'Sacas rápido y plano…' : 'Sacas lento con efecto…');
+    await tweenCamera(stage, ...CAM.serve(), 0.4);
+    ball.set(serveArc[0]);
+    ball.show(true);
+    await Promise.all([setPose(stage, user, 'serveHit', 0.25), flyBall(stage, ball, serveArc, fast ? 0.55 : 1.0)]);
+    bounceMark(fx, bounce[0], bounce[2]);
+    await Promise.all([
+      flyBall(stage, ball, S.afterArc, fast ? 0.15 : 0.3, 0, 0.5),
+      moveTo(stage, rec(), [S.recHit[0], rp.z], 0.35),
+      setPose(stage, user, 'ready', 0.3),
+    ]);
+    return 'move';
+  }
+
+  async function animMove(id) {
+    const fast = choice('speed') === 'rapido';
+    const finish = flyBall(stage, ball, S.afterArc, fast ? 0.15 : 0.35, 0.5, 1);
+
+    if (id === 'red' && !fast) {
+      playing(aus() ? 'Cruzas en diagonal a la red de tu lado mientras el rival resta…' : 'Subes a la red mientras el rival resta…');
+      await Promise.all([moveTo(stage, user, [2.45, 3.0], aus() ? 1.3 : 1.1), finish.then(() => setPose(stage, rec(), 'lob', 0.25))]);
+      const lob = arc(S.recHit, [2.3, 0, 8.4], 6.2, 70);
+      let idx = 0;
+      lob.forEach((p, i) => { if (i > 10 && Math.abs(p.z - 5.8) < Math.abs(lob[idx].z - 5.8)) idx = i; });
+      const info = pathInfo(lob.slice(0, idx + 1));
+      const frac = info.total / pathInfo(lob).total;
+      S.lob = lob;
+      S.hitP = lob[idx].clone();
+      fx.clear();
+      drawPath(fx, lob, { opacity: 0.35, spacing: 0.4 });
+      playing('¡El rival te tira un globo!');
+      await Promise.all([
+        flyBall(stage, ball, lob, 1.7, 0, frac),
+        tweenCamera(stage, ...CAM.lob(), 1.2),
+        moveTo(stage, recP(), [X(2.5), -8.2], 1.2),
+        (async () => { await wait(stage, 0.3); await moveTo(stage, user, [2.4, 5.8], 1.0); await setPose(stage, user, 'overhead', 0.3); })(),
+      ]);
+      return 'lob';
+    }
+
+    if (aus()) {
+      // Australiana (escenario E1): todavía vas cruzando y el resto paralelo cae en el hueco de tu lado
+      const stop = { red: [1.2, 5.4], mitad: [0.5, 6.1], atras: serveSpot() }[id];
+      playing({
+        red: 'Tu saque rápido regresó rápido: todavía vas cruzando…',
+        mitad: 'Te detienes a medio camino de tu lado…',
+        atras: 'Te quedas atrás y tu lado queda vacío…',
+      }[id]);
+      addZone(fx, { x: 2.7, z: 5.4, w: 2.2, d: 3.6, color: C.bad, text: 'Hueco' });
+      await Promise.all([
+        moveTo(stage, user, stop, fast ? 0.5 : 0.8),
+        finish.then(() => setPose(stage, rec(), 'backhand', 0.2)),
+        tweenCamera(stage, ...CAM.wide(), 0.8),
+      ]);
+      const pass = joinArcs(arc(S.recHit, [3.1, 0, 4.4], 1.35), arc([3.1, 0, 4.4], [3.6, 0.8, 9.95], 1.1, 18));
+      drawPath(fx, pass, { color: C.bad, opacity: 0.6, spacing: 0.4 });
+      floatLabel(fx, 'Resto paralelo', [3.0, 1.7, -2.0], C.bad);
+      await Promise.all([
+        flyBall(stage, ball, pass, 1.3),
+        (async () => { await setPose(stage, user, 'volley', 0.2); await moveTo(stage, user, [stop[0] + 0.9, stop[1] - 0.2], 0.5); })(),
+      ]);
+      await wait(stage, 0.3);
+      return {
+        end: true, won: false,
+        reason: {
+          red: 'Formación australiana: con el saque rápido no alcanzaste a cruzar a tu lado y el resto paralelo cayó en el hueco que ibas cubriendo.',
+          mitad: 'Te quedaste a medio camino: tu lado quedó abierto y el rival jugó paralelo al hueco.',
+          atras: 'En australiana tienes que cruzar a tu lado: al quedarte atrás, el rival jugó paralelo al lado vacío.',
+        }[id],
+      };
+    }
+
+    if (id === 'atras') {
+      playing('Te quedas en el fondo y los rivales aprovechan para subir…');
+      await finish;
+      setPose(stage, rec(), 'ready', 0.2);
+      const ret = joinArcs(arc(S.recHit, [X(2.1), 0, 6.4], 1.4), arc([X(2.1), 0, 6.4], [X(2.45), 0.6, 8.3], 0.75, 16));
+      drawPath(fx, ret, { opacity: 0.35, spacing: 0.4 });
+      await Promise.all([
+        flyBall(stage, ball, ret, 1.1),
+        moveTo(stage, recP(), [X(2.4), -3.0], 1.1),
+        moveTo(stage, rec(), [X(-2.4), -3.2], 1.2),
+        tweenCamera(stage, ...CAM.wide(), 1.1),
+      ]);
+      await setPose(stage, user, 'volley', 0.15);
+      const shot = arc([X(2.45), 0.6, 8.3], [X(2.2), 1.1, -2.7], 1.35);
+      await flyBall(stage, ball, shot, 0.8);
+      await setPose(stage, recP(), 'serveHit', 0.12);
+      const win = joinArcs(arc([X(2.2), 1.1, -2.7], [X(-0.6), 0, 4.8], 1.2), arc([X(-0.6), 0, 4.8], [X(-0.9), 0.4, 9.9], 0.9, 16));
+      await flyBall(stage, ball, win, 0.8);
+      return { end: true, won: false, reason: 'Desde el fondo le diste la red a la pareja rival y terminaron el punto con volea.' };
+    }
+
+    // Media pista, o subir a la red después de un saque rápido: el resto te agarra a los pies
+    playing(id === 'red'
+      ? 'Tu saque rápido regresó rápido: no alcanzas a llegar a la red…'
+      : 'Te quedas a media pista y el rival lo ve…');
+    await Promise.all([moveTo(stage, user, [X(2.5), 5.3], id === 'red' ? 0.6 : 0.5), finish.then(() => setPose(stage, rec(), 'backhand', 0.2))]);
+    const low = arc(S.recHit, [X(2.3), 0.15, 5.1], 1.25);
+    drawPath(fx, low, { opacity: 0.35, spacing: 0.4 });
+    await Promise.all([flyBall(stage, ball, low, 0.75), setPose(stage, user, 'volley', 0.4), tweenCamera(stage, [X(7), 4.5, 10], [0, 0.6, 2], 0.8)]);
+    const fail = arc([X(2.3), 0.15, 5.1], [X(1.6), 0.4, 0.06], 0.75);
+    await flyBall(stage, ball, fail, 0.6);
+    await wait(stage, 0.3);
+    return {
+      end: true, won: false,
+      reason: id === 'red'
+        ? 'Con el saque rápido no te dio tiempo de llegar a tu lugar en la red: el resto te cayó a los pies y la volea se fue a la red.'
+        : 'A media pista el resto te cayó a los pies y la volea se fue a la red.',
+    };
+  }
+
+  async function animLob(id) {
+    fx.clear();
+    const h = S.hitP;
+    const hp = [h.x, h.y, h.z];
+
+    if (id === 'botar') {
+      playing('La dejas pasar y la juegas después del vidrio…');
+      const rest = joinArcs(arc(hp, [2.3, 0, 8.4], h.y + 0.1, 20), arc([2.3, 0, 8.4], [2.38, 1.7, 9.95], 2.1, 16), arc([2.38, 1.7, 9.95], [2.2, 1.0, 8.6], 1.8, 12));
+      await Promise.all([setPose(stage, user, 'ready', 0.2), moveTo(stage, user, [2.3, 9.2], 0.9), flyBall(stage, ball, rest, 1.1), tweenCamera(stage, ...CAM.wide(), 1.1)]);
+      await setPose(stage, user, 'lob', 0.15);
+      const myLob = arc([2.2, 1.0, 8.6], [X(-1.0), 0, -8.2], 6.0, 60);
+      drawPath(fx, myLob, { opacity: 0.3, spacing: 0.45 });
+      await Promise.all([
+        flyBall(stage, ball, myLob, 1.6, 0, 0.55),
+        moveTo(stage, rec(), [X(-2.4), -3.0], 1.2),
+        moveTo(stage, recP(), [X(2.4), -3.0], 1.2),
+        moveTo(stage, partner, [-2.5, 7.6], 1.4),
+      ]);
+      await setPose(stage, rec(), 'overhead', 0.2);
+      await setPose(stage, rec(), 'overheadHit', 0.15);
+      const smash = arc([X(-1.0), 3.2, -3.3], [X(0.2), 0, 5.5], 3.3);
+      await flyBall(stage, ball, joinArcs(smash, arc([X(0.2), 0, 5.5], [X(0.4), 1.2, 9.95], 1.6, 14)), 0.75);
+      return { end: true, won: false, reason: 'Jugar desde atrás es válido, pero perdiste la red y los rivales terminaron el punto desde arriba.' };
+    }
+
+    if (id === 'remate') {
+      playing('Rematas fuerte desde media pista…');
+      await setPose(stage, user, 'overheadHit', 0.15);
+      const smash = joinArcs(arc(hp, [X(-1.2), 0, -5.8], h.y + 0.1), arc([X(-1.2), 0, -5.8], [X(-1.4), 2.0, -9.95], 2.6, 20), arc([X(-1.4), 2.0, -9.95], [X(-1.6), 1.0, -8.1], 2.1, 14));
+      drawPath(fx, smash, { opacity: 0.35, spacing: 0.4 });
+      await Promise.all([flyBall(stage, ball, smash, 1.2), moveTo(stage, rec(), [X(-1.7), -8.4], 1.0), tweenCamera(stage, ...CAM.wide(), 1.1), moveTo(stage, user, [2.45, 4.4], 1.0)]);
+      await setPose(stage, rec(), 'lob', 0.15);
+      const pass = joinArcs(arc([X(-1.6), 1.0, -8.1], [1.0, 0, 6.8], 1.5), arc([1.0, 0, 6.8], [1.3, 0.5, 9.9], 0.9, 14));
+      drawPath(fx, pass, { color: C.bad, opacity: 0.5, spacing: 0.4 });
+      await flyBall(stage, ball, pass, 1.0);
+      return { end: true, won: false, reason: 'El remate lejos de la red regresó del vidrio; el rival defendió y te pasó por el centro.' };
+    }
+
+    // Bandeja o víbora: mantienes la red y tu compañero cierra el punto
+    const vib = id === 'vibora';
+    playing(vib ? 'Juegas una víbora hacia el vidrio lateral…' : 'Juegas una bandeja controlada…');
+    await setPose(stage, user, 'overheadHit', 0.2);
+    const tgt = vib ? [X(-4.2), 0, -7.0] : [X(-3.0), 0, -7.6];
+    const glass = vib ? [X(-4.95), 1.1, -8.0] : [X(-3.3), 1.2, -9.95];
+    const shot = joinArcs(arc(hp, tgt, h.y + 0.2), arc(tgt, glass, 1.5, 14), arc(glass, [X(-2.9), 1.0, -8.7], 1.4, 12));
+    drawPath(fx, shot, { opacity: 0.35, spacing: 0.4 });
+    await Promise.all([
+      flyBall(stage, ball, shot, vib ? 1.0 : 1.3),
+      moveTo(stage, rec(), [X(-2.9), -9.1], 0.9),
+      moveTo(stage, user, [2.45, 3.4], 1.2),
+      tweenCamera(stage, ...CAM.wide(), 1.1),
+    ]);
+    await setPose(stage, rec(), 'backhand', 0.15);
+    const weak = arc([X(-2.9), 1.0, -8.7], [-1.9, 1.2, 2.5], 2.4);
+    drawPath(fx, weak, { opacity: 0.35, spacing: 0.4 });
+    await Promise.all([flyBall(stage, ball, weak, 0.9), moveTo(stage, partner, [-2.0, 2.9], 0.6)]);
+    await setPose(stage, partner, 'serveHit', 0.12);
+    const winner = joinArcs(arc([-1.9, 1.2, 2.5], [X(0.2), 0, -6.4], 1.3), arc([X(0.2), 0, -6.4], [X(0.5), 0.5, -9.95], 0.9, 14));
+    drawPath(fx, winner, { color: C.good, opacity: 0.6, spacing: 0.4 });
+    await flyBall(stage, ball, winner, 0.7);
+    return {
+      end: true, won: true,
+      reason: vib
+        ? 'La víbora salió bien: el rival defendió como pudo y tu compañero cerró con volea.'
+        : 'Tu bandeja te mantuvo en la red: el rival defendió como pudo y tu compañero cerró con volea.',
+    };
+  }
+
+  // ---------- Flujo: decisiones, historial y pantallas ----------
+
+  const PTS = ['0', '15', '30', '40'];
+  const RATE = {
+    g: '<span class="badge ok">✓ Óptimo</span>',
+    a: '<span class="badge dep">◐ Depende</span>',
+    r: '<span class="badge err">✕ Error común</span>',
+  };
+  const EV = { fed: '<span class="ev fed">FEDERATIVO</span>', study: '<span class="ev study">ESTUDIO</span>', cons: '<span class="ev cons">CONSENSO + LÓGICA</span>' };
+
+  const formation = document.createElement('div');
+  formation.className = 'hud tl';
+  $('proto-stage').appendChild(formation);
+
+  function header() {
+    formation.textContent = aus() ? 'Formación australiana' : 'Formación convencional';
+    $('proto-title').textContent = `Punto ${S.point} · Sacas tú`;
+    $('proto-score').textContent = `${PTS[S.score[0]]} - ${PTS[S.score[1]]}`;
+    const chips = S.choices.map((c, i) => `<span class="chip"><i class="dot ${c.r}"></i>${i + 1} · ${c.s}</span>`);
+    if (S.view === 'question' || S.view === 'feedback') {
+      chips.push(`<span class="chip now"><i class="dot n"></i>${S.choices.length + 1} · ${NODES[S.node].short}</span>`);
+    }
+    const trail = $('proto-trail');
+    trail.innerHTML = chips.join('');
+    trail.scrollLeft = trail.scrollWidth;
+    backEl.classList.toggle('disabled', S.busy || (S.stack.length < 2 && S.view !== 'feedback' && S.view !== 'end'));
+  }
+
+  function snap() {
+    const s = (p) => [[p.position.x, p.position.z], p.userData.pose];
+    return {
+      players: [user, partner, rDrive, rReves].map(s),
+      ball: ball.mesh.visible ? ball.mesh.position.clone() : null,
+      cam: [stage.camera.position.toArray(), stage.controls.target.toArray()],
+      nChoices: S.choices.length,
+    };
+  }
+
+  function restore(sn, key) {
+    [user, partner, rDrive, rReves].forEach((p, i) => placePlayer(p, ...sn.players[i]));
+    if (sn.ball) { ball.set(sn.ball); ball.show(true); } else ball.show(false);
+    stage.camera.position.fromArray(sn.cam[0]);
+    stage.controls.target.fromArray(sn.cam[1]);
+    S.choices.length = sn.nChoices;
+    fx.clear();
+    NODES[key].fx?.();
+  }
+
+  function enterNode(key) {
+    S.node = key;
+    S.stack.push({ key, snap: snap() });
+    fx.clear();
+    NODES[key].fx?.();
+    renderQuestion();
+  }
+
+  function renderQuestion() {
+    const n = NODES[S.node];
+    S.view = 'question';
+    sheet.innerHTML = `<div class="kicker">${n.kicker}</div>${n.ctx ? `<div class="ctx">${n.ctx()}</div>` : ''}<div class="q">${n.q}</div>`
+      + n.opts.map((o, i) => `<div class="opt" data-opt="${o.id}"><span class="key">${'ABCD'[i]}</span><div><div class="t">${o.t}</div><div class="d">${o.d}</div></div></div>`).join('');
+    header();
+  }
+
+  function renderFeedback(id) {
+    const f = NODES[S.node].fb(id);
+    S.view = 'feedback';
+    S.pending = id;
+    const list = (items) => `<ul>${items.map((x) => `<li>${x}</li>`).join('')}</ul>`;
+    sheet.innerHTML = `<div>${RATE[f.r]}${f.ev.map((e) => EV[e]).join('')}</div>
+      <div class="fb-title">${f.title}</div><p class="fb-body">${f.body}</p>
+      ${f.yes ? `<div class="box yes"><div class="lbl">Funciona si</div>${list(f.yes)}</div>` : ''}
+      ${f.warn ? `<div class="box warn"><div class="lbl">Cuidado si</div>${list(f.warn)}</div>` : ''}
+      ${f.src ? `<div class="source">📊 ${f.src}</div>` : ''}
+      <div class="btns"><div class="btn sec" data-act="change">↩ Cambiar respuesta</div><div class="btn pri" data-act="go">Seguir el punto →</div></div>`;
+    header();
+  }
+
+  async function proceed() {
+    const n = NODES[S.node];
+    const id = S.pending;
+    const opt = n.opts.find((o) => o.id === id);
+    S.choices.push({ node: S.node, id, s: opt.s, r: n.fb(id).r, label: n.short });
+    S.busy = true;
+    S.view = 'playing';
+    header();
+    const next = await n.after(id);
+    stage.skip = false;
+    S.busy = false;
+    if (next.end) showEnd(next);
+    else enterNode(next);
+  }
+
+  function showEnd({ won, reason }) {
+    reason = String(reason);
+    S.view = 'end';
+    S.scoreBefore = [...S.score];
+    const w = won ? 0 : 1;
+    const game = S.score[w] === 3; // de 40 a juego: el marcador vuelve a 0 - 0
+    if (game) S.score = [0, 0];
+    else S.score[w] += 1;
+    if (game) reason += won ? ' ¡Juego para ustedes!' : ' Juego para los rivales.';
+    const count = (r) => S.choices.filter((c) => c.r === r).length;
+    const grad = won ? 'rgba(61,220,151,.25), rgba(61,220,151,.05)' : 'rgba(255,107,91,.25), rgba(255,107,91,.05)';
+    const bdr = won ? 'rgba(61,220,151,.4)' : 'rgba(255,107,91,.35)';
+    const colors = { g: 'var(--green)', a: 'var(--amber)', r: 'var(--coral)' };
+    sheet.innerHTML = `<div class="result" style="background:linear-gradient(135deg, ${grad});border-color:${bdr}">
+        <div class="big">${won ? '¡Ganaste el punto!' : 'Perdiste el punto'}</div><div class="sub" style="color:var(--text)">${reason}</div></div>
+      <div class="stats">
+        <div class="stat"><div class="n" style="color:var(--green)">${count('g')}</div><div class="l">Óptimas</div></div>
+        <div class="stat"><div class="n" style="color:var(--amber)">${count('a')}</div><div class="l">Depende</div></div>
+        <div class="stat"><div class="n" style="color:var(--coral)">${count('r')}</div><div class="l">Error común</div></div>
+      </div>
+      ${S.choices.map((c, i) => `<div class="tl-row"><span class="tl-n" style="background:${colors[c.r]}">${i + 1}</span><div><div class="k">${c.label}</div><div class="v">${c.s}</div></div></div>`).join('')}
+      <div class="btns"><div class="btn sec" data-act="repeat">↻ Repetir punto</div><div class="btn pri" data-act="next">Siguiente punto →</div></div>`;
+    header();
+  }
+
+  async function nextPoint() {
+    S.busy = true;
+    S.m *= -1;
+    S.point += 1;
+    S.choices = [];
+    S.stack = [];
+    S.view = 'playing';
+    playing(`Punto ${S.point}: ahora sacas desde el ${S.m === 1 ? 'lado derecho (drive)' : 'lado del revés'}…`);
+    header();
+    fx.clear();
+    ball.show(false);
+    await Promise.all([
+      moveTo(stage, user, serveSpot(), 1.4),
+      moveTo(stage, partner, partnerSpot(), 1.4),
+      moveTo(stage, rec(), [X(-2.6), -8.6], 1.4),
+      moveTo(stage, recP(), [X(2.5), -5.8], 1.4),
+      tweenCamera(stage, ...CAM.serve(), 1.4),
+    ]);
+    await Promise.all([setPose(stage, user, 'serve'), setPose(stage, partner, 'ready'), setPose(stage, rec(), 'ready'), setPose(stage, recP(), 'ready')]);
+    stage.skip = false;
+    S.busy = false;
+    enterNode('speed');
+  }
+
+  function repeatPoint() {
+    S.score = S.scoreBefore;
+    const first = S.stack[0];
+    S.stack = [first];
+    restore(first.snap, first.key);
+    S.node = first.key;
+    renderQuestion();
+  }
+
+  sheet.addEventListener('click', (e) => {
+    const opt = e.target.closest('[data-opt]');
+    const act = e.target.closest('[data-act]')?.dataset.act;
+    if (opt && !S.busy) return renderFeedback(opt.dataset.opt);
+    if (act === 'skip') stage.skip = true;
+    if (S.busy) return;
+    if (act === 'change') renderQuestion();
+    if (act === 'go') proceed();
+    if (act === 'next') nextPoint();
+    if (act === 'repeat') repeatPoint();
+  });
+
+  backEl.addEventListener('click', () => {
+    if (S.busy) return;
+    if (S.view === 'feedback') return renderQuestion();
+    if (S.view === 'end') {
+      S.score = S.scoreBefore;
+      const top = S.stack[S.stack.length - 1];
+      restore(top.snap, top.key);
+      S.node = top.key;
+      return renderQuestion();
+    }
+    if (S.stack.length < 2) return;
+    S.stack.pop();
+    const prev = S.stack[S.stack.length - 1];
+    restore(prev.snap, prev.key);
+    S.node = prev.key;
+    renderQuestion();
+  });
+
+  window.__proto = { stage, S }; // para depurar desde la consola
+  startLayout();
+  enterNode('speed');
+}
+
+</script>
+</body>
+</html>
