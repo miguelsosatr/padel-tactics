@@ -472,6 +472,33 @@ Catálogo para el juego educativo de táctica de pádel, pensado para principian
 
 ---
 
+## Nuevos en el prototipo
+
+### E14. Víbora del rival a la doble pared (lateral y fondo)
+
+**Situación:** Restaste con globo y el rival, desde la línea de saque, te pega una víbora a tu esquina. La pelota va a pegar primero en el vidrio lateral y después en el de fondo.
+
+**Pregunta:** ¿Hacia dónde te mueves para esperarla?
+
+**Geometría que hay que enseñar:** al pegar en el lateral, la pelota cambia de dirección hacia el fondo; al pegar en el fondo, sale hacia el centro de la pista, con menos velocidad [solo lógica: geometría de los rebotes].
+
+- **A. Salir de la esquina, hacia el centro, un paso por delante del vidrio de fondo.** — **Óptimo**. Federativo [F35]: jugar con el vidrio es lo más difícil; esperar de lado, con la pala arriba. La posición concreta es [solo lógica]. Para un diestro en el lado derecho, la pelota sale por su derecha; para un zurdo, por su revés, así que conviene separarse un poco más del lateral [solo lógica].
+- **B. Meterse a la esquina.** — **Error común**. La pelota sale hacia donde estás y te queda encima [solo lógica].
+- **C. Irse hacia adelante.** — **Error común**. Después de dos vidrios la pelota sale poco [solo lógica].
+- **D. Pegarle antes del vidrio.** — **Error común** en básico e intermedio; **Depende** en avanzado. Federativo [F41]: una pelota rápida te da más tiempo si la dejas salir de la pared.
+
+### E15. El reloj: dónde le pegas a la pelota por arriba
+
+**Situación:** Elegiste bandeja, víbora o remate. Se hace zoom a la pelota, vista desde atrás, con un reloj alrededor.
+
+**Pregunta:** ¿A qué hora le pegas?
+
+- **Derecho:** bandeja a las 4:00–5:00 (por la derecha y por abajo), víbora a las 2:00–3:00 (más de lado), remate plano a las 12:00. **Zurdo:** el lado contrario: bandeja a las 7:00–8:00 y víbora a las 9:00–10:00.
+- **Evidencia:** Consenso de entrenadores (forma común de enseñar el punto de impacto). No se encontró una fuente con autor acreditado; las horas exactas son una convención de enseñanza.
+- En el prototipo, la hora decide el golpe que sale de verdad: pegarle a las 12:00 queriendo bandeja produce un remate, y el lado contrario de la pelota manda la pelota a la reja.
+
+---
+
 ## Errores típicos de principiante: resumen y respaldo
 
 | Error | Escenarios | Respaldo más fuerte | Calidad del respaldo |

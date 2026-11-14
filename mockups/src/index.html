@@ -54,6 +54,17 @@
   .hud { position: absolute; font-size: 11px; font-weight: 600; background: rgba(15,29,51,.85); border: 1px solid var(--line); padding: 5px 9px; border-radius: 8px; pointer-events: none; }
   .hud.tl { top: 8px; left: 12px; } .hud.br { bottom: 30px; left: 12px; color: var(--muted); }
   .hud b { color: var(--lime); }
+  .hud.tr { top: 8px; right: 12px; }
+  .hud.prof { pointer-events: auto; cursor: pointer; color: var(--lime); }
+  .clock { position: absolute; inset: 0; display: none; place-items: center; pointer-events: none; background: radial-gradient(circle at center, rgba(7,15,28,0) 25%, rgba(7,15,28,.65) 80%); }
+  .clock.on { display: grid; }
+  .clock svg { height: 84%; max-width: 92%; aspect-ratio: 1; }
+  .clock .cap { position: absolute; bottom: 8px; left: 0; right: 0; text-align: center; font-size: 11px; color: var(--muted); font-weight: 600; }
+  .plbl { font-size: 11px; font-weight: 800; color: var(--muted); text-transform: uppercase; letter-spacing: .06em; margin: 12px 0 6px; }
+  .pick-row { display: flex; gap: 8px; } .pick-row .opt { flex: 1; }
+  .opt { cursor: pointer; }
+  .btn { cursor: pointer; }
+  .btn.disabled { opacity: .4; pointer-events: none; }
 
   .sheet { flex: none; background: var(--panel); border-radius: 22px 22px 0 0; padding: 16px 16px 20px; border-top: 1px solid var(--line); }
   .kicker { font-size: 11px; color: var(--lime); text-transform: uppercase; letter-spacing: .08em; font-weight: 800; }
@@ -81,6 +92,7 @@
   .ev.cons { background: rgba(199,155,255,.14); color: #d6b8ff; border: 1px solid rgba(199,155,255,.35); }
   .box.yes { border-left: 3px solid var(--green); }
   .box.warn { border-left: 3px solid var(--amber); }
+  .box.tip { border-left: 3px solid var(--lime); }
   .box ul { margin: 2px 0 0; padding-left: 16px; }
   .box li { margin: 1px 0; }
   .fb-title { font-size: 18px; font-weight: 750; margin: 10px 0 6px; line-height: 1.25; }
@@ -145,7 +157,7 @@
 
   <!-- 0. PROTOTIPO JUGABLE -->
   <div class="frame-wrap">
-    <div class="frame-title" style="color:var(--lime)">▶ Prototipo jugable · un punto completo</div>
+    <div class="frame-title" style="color:var(--lime)">▶ Prototipo jugable · puntos completos</div>
     <div class="phone">
       <div class="status"><span>9:41</span><span>●●● 100%</span></div>
       <div class="topbar"><span class="back" id="proto-back">← Decisión anterior</span><span class="ttl" id="proto-title">Punto 1 · Sacas tú</span><span class="score" id="proto-score">0 - 0</span></div>
@@ -154,7 +166,7 @@
       <div class="sheet" id="proto-sheet" style="flex:1;overflow:auto"></div>
     </div>
     <div class="notes"><b>Cómo funciona:</b>
-      <ul><li>Eliges → ves el feedback → “Seguir el punto” reproduce lo que pasa y se congela en la siguiente decisión.</li><li>El punto termina cuando alguien lo gana; luego “Siguiente punto” acomoda a todos y ahora sacas desde el otro lado.</li><li>Prueba varias rutas: saque rápido + subir a la red, quedarte atrás, remate vs. bandeja.</li><li>“← Decisión anterior” regresa la escena tal como estaba.</li></ul>
+      <ul><li>Antes de empezar eliges si eres derecho o zurdo y tu nivel (básico, intermedio o avanzado); los consejos se ajustan. Se cambia tocando la etiqueta de arriba a la derecha.</li><li>Eliges → ves el feedback → “Seguir el punto” reproduce lo que pasa y se congela en la siguiente decisión.</li><li>Los puntos rotan: 1) sacas desde la derecha; 2) sacas en australiana (chiquita y bola dividida al centro); 3) restas y defiendes una víbora a la doble pared.</li><li>Si eliges bandeja, víbora o remate, hay zoom a la pelota con un reloj: ¿a qué hora le pegas?</li><li>“← Decisión anterior” regresa la escena tal como estaba.</li></ul>
     </div>
   </div>
 
